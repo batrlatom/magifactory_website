@@ -246,9 +246,7 @@ const AppContent = () => {
   );
 };
 
-const ProductList = ({ products }) => {
-  const { trackEvent } = useAnalytics();
-
+const ProductList = ({ products, trackEvent }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {products.map((product) => (
@@ -256,9 +254,15 @@ const ProductList = ({ products }) => {
           <Link
             to={`/product/${product.id}`}
             className="cursor-pointer"
-            onClick={() => trackEvent('view_item', 'Ecommerce', product.name)}
+            onClick={() => trackEvent('view_item', 'Ecommerce', product.name, product.price)}
           >
-            <img src={product.imageUrl} alt={product.name} className="w-full h-auto object-cover mb-2" />
+            <div className="w-full h-96 overflow-hidden mb-2">
+              <img 
+                src={product.imageUrl} 
+                alt={product.name} 
+                className="w-full h-full object-cover object-top"
+              />
+            </div>
             <h2 className="text-xl font-bold">{product.name}</h2>
             <p className="text-gray-600">${product.price.toFixed(2)}</p>
           </Link>
@@ -267,6 +271,7 @@ const ProductList = ({ products }) => {
     </div>
   );
 };
+
 
 const ProductPage = ({ products, addToCart }) => {
   const { id } = useParams();
