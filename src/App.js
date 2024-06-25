@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { db, storage, auth } from './firebase';
 import { collection, getDocs, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
@@ -7,12 +7,48 @@ import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from
 
 import './App.css';
 
+// Custom hook for Google Analytics tracking
+const useAnalytics = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (window.gtag) {
+      window.gtag('event', 'page_view', {
+        page_path: location.pathname + location.search,
+      });
+    }
+  }, [location]);
+
+  const trackEvent = (action, category, label, value) => {
+    if (window.gtag) {
+      window.gtag('event', action, {
+        event_category: category,
+        event_label: label,
+        value: value,
+      });
+    }
+  };
+
+  return { trackEvent };
+};
+
 // Main App component
 const App = () => {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
+  );
+};
+
+// AppContent component (wrapped by Router)
+const AppContent = () => {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { trackEvent } = useAnalytics();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -29,6 +65,7 @@ const App = () => {
 
     return () => unsubscribe();
   }, []);
+
 
   const fetchProducts = async () => {
     const productsCollection = collection(db, 'products');
@@ -76,11 +113,14 @@ const App = () => {
   const addToCart = async (product) => {
     const updatedCart = [...cart, product];
     await updateCart(updatedCart);
+    trackEvent('add_to_cart', 'Ecommerce', product.name, product.price);
   };
 
   const removeFromCart = async (index) => {
+    const removedItem = cart[index];
     const updatedCart = cart.filter((_, i) => i !== index);
     await updateCart(updatedCart);
+    trackEvent('remove_from_cart', 'Ecommerce', removedItem.name, removedItem.price);
   };
 
   const updateCart = async (updatedCart) => {
@@ -97,6 +137,7 @@ const App = () => {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
+      trackEvent('login', 'User', 'Google Login');
     } catch (error) {
       console.error("Error signing in: ", error);
     }
@@ -107,6 +148,7 @@ const App = () => {
       await signOut(auth);
       setCart([]);
       localStorage.removeItem('sessionCart');
+      trackEvent('logout', 'User', 'User Logout');
     } catch (error) {
       console.error("Error signing out: ", error);
     }
@@ -117,55 +159,62 @@ const App = () => {
   }
 
   return (
-    <Router>
-      <div className="container mx-auto p-4">
-        <nav className="mb-4 flex justify-between items-center">
-          <Link to="/" className="text-blue-500 hover:text-blue-700 text-xl font-bold">
-            Magifactory
+    <div className="container mx-auto p-4">
+      <nav className="mb-4 flex justify-between items-center">
+        <Link to="/" className="text-blue-500 hover:text-blue-700 text-xl font-bold">
+          Magifactory
+        </Link>
+        <div className="flex items-center">
+          <Link to="/cart" className="text-blue-500 hover:text-blue-700 mr-4">
+            Cart ({cart.length})
           </Link>
-          <div className="flex items-center">
-            <Link to="/cart" className="text-blue-500 hover:text-blue-700 mr-4">
-              Cart ({cart.length})
-            </Link>
-            {user ? (
-              <div className="flex items-center">
-                <span className="mr-2">Welcome, {user.displayName}!</span>
-                <button onClick={handleLogout} className="bg-red-500 text-white px-4 py-2 rounded">Logout</button>
-              </div>
-            ) : (
-              <button onClick={handleLogin} className="bg-blue-500 text-white px-4 py-2 rounded">Login</button>
-            )}
-          </div>
-        </nav>
-        <Routes>
-          <Route path="/" element={<ProductList products={products} />} />
-          <Route path="/product/:id" element={<ProductPage products={products} addToCart={addToCart} />} />
-          <Route path="/cart" element={<Cart cart={cart} removeFromCart={removeFromCart} />} />
-          <Route path="/shipping" element={<Shipping />} />
-          <Route path="/payment" element={<Payment updateCart={updateCart} />} />
-        </Routes>
-      </div>
-    </Router>
+          {user ? (
+            <div className="flex items-center">
+              <span className="mr-2">Welcome, {user.displayName}!</span>
+              <button onClick={handleLogout} className="bg-red-500 text-white px-4 py-2 rounded">Logout</button>
+            </div>
+          ) : (
+            <button onClick={handleLogin} className="bg-blue-500 text-white px-4 py-2 rounded">Login</button>
+          )}
+        </div>
+      </nav>
+      <Routes>
+        <Route path="/" element={<ProductList products={products} />} />
+        <Route path="/product/:id" element={<ProductPage products={products} addToCart={addToCart} />} />
+        <Route path="/cart" element={<Cart cart={cart} removeFromCart={removeFromCart} />} />
+        <Route path="/shipping" element={<Shipping />} />
+        <Route path="/payment" element={<Payment updateCart={updateCart} />} />
+      </Routes>
+    </div>
   );
 };
 
-const ProductList = ({ products }) => (
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-    {products.map((product) => (
-      <div key={product.id} className="border p-4 rounded">
-        <Link to={`/product/${product.id}`} className="cursor-pointer">
-          <img src={product.imageUrl} alt={product.name} className="w-full h-auto object-cover mb-2" />
-          <h2 className="text-xl font-bold">{product.name}</h2>
-          <p className="text-gray-600">${product.price.toFixed(2)}</p>
-        </Link>
-      </div>
-    ))}
-  </div>
-);
+const ProductList = ({ products }) => {
+  const { trackEvent } = useAnalytics();
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {products.map((product) => (
+        <div key={product.id} className="border p-4 rounded">
+          <Link
+            to={`/product/${product.id}`}
+            className="cursor-pointer"
+            onClick={() => trackEvent('view_item', 'Ecommerce', product.name)}
+          >
+            <img src={product.imageUrl} alt={product.name} className="w-full h-auto object-cover mb-2" />
+            <h2 className="text-xl font-bold">{product.name}</h2>
+            <p className="text-gray-600">${product.price.toFixed(2)}</p>
+          </Link>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const ProductPage = ({ products, addToCart }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { trackEvent } = useAnalytics();
   const product = products.find(p => p.id === id);
 
   if (!product) return <div>Product not found</div>;
@@ -195,6 +244,7 @@ const ProductPage = ({ products, addToCart }) => {
 
 const Cart = ({ cart, removeFromCart }) => {
   const navigate = useNavigate();
+  const { trackEvent } = useAnalytics();
 
   useEffect(() => {
     if (cart.length === 0) {
@@ -232,7 +282,11 @@ const Cart = ({ cart, removeFromCart }) => {
           <Link to="/" className="bg-gray-500 text-white px-4 py-2 rounded">
             Continue Shopping
           </Link>
-          <Link to="/shipping" className="bg-blue-500 text-white px-4 py-2 rounded">
+          <Link
+            to="/shipping"
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+            onClick={() => trackEvent('begin_checkout', 'Ecommerce', 'Begin Checkout', cart.reduce((total, item) => total + item.price, 0))}
+          >
             Proceed to Checkout
           </Link>
         </div>
@@ -241,31 +295,41 @@ const Cart = ({ cart, removeFromCart }) => {
   );
 };
 
-const Shipping = () => (
-  <div>
-    <h1 className="text-2xl font-bold mb-4">Shipping Information</h1>
-    <form className="space-y-4">
-      <div>
-        <label htmlFor="name" className="block mb-1">Name</label>
-        <input type="text" id="name" className="w-full border rounded px-2 py-1" required />
-      </div>
-      <div>
-        <label htmlFor="address" className="block mb-1">Address</label>
-        <input type="text" id="address" className="w-full border rounded px-2 py-1" required />
-      </div>
-      <Link to="/payment" className="inline-block bg-blue-500 text-white px-4 py-2 rounded">
-        Proceed to Payment
-      </Link>
-    </form>
-  </div>
-);
+const Shipping = () => {
+  const { trackEvent } = useAnalytics();
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-4">Shipping Information</h1>
+      <form className="space-y-4">
+        <div>
+          <label htmlFor="name" className="block mb-1">Name</label>
+          <input type="text" id="name" className="w-full border rounded px-2 py-1" required />
+        </div>
+        <div>
+          <label htmlFor="address" className="block mb-1">Address</label>
+          <input type="text" id="address" className="w-full border rounded px-2 py-1" required />
+        </div>
+        <Link
+          to="/payment"
+          className="inline-block bg-blue-500 text-white px-4 py-2 rounded"
+          onClick={() => trackEvent('add_shipping_info', 'Ecommerce', 'Add Shipping Info')}
+        >
+          Proceed to Payment
+        </Link>
+      </form>
+    </div>
+  );
+};
 
 const Payment = ({ updateCart }) => {
   const navigate = useNavigate();
+  const { trackEvent } = useAnalytics();
 
   const handleSubmit = (e) => {
     e.preventDefault();
     alert('Order placed successfully!');
+    trackEvent('purchase', 'Ecommerce', 'Purchase Complete');
     updateCart([]);
     navigate('/');
   };
@@ -286,7 +350,11 @@ const Payment = ({ updateCart }) => {
           <label htmlFor="cvv" className="block mb-1">CVV</label>
           <input type="text" id="cvv" className="w-full border rounded px-2 py-1" required />
         </div>
-        <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">
+        <button
+          type="submit"
+          className="bg-green-500 text-white px-4 py-2 rounded"
+          onClick={() => trackEvent('add_payment_info', 'Ecommerce', 'Add Payment Info')}
+        >
           Complete Order
         </button>
       </form>
