@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { db, storage, auth } from './firebase';
-import { collection, getDocs, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, getDoc, updateDoc, addDoc, query, where, orderBy } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 
@@ -154,6 +154,60 @@ const AppContent = () => {
     }
   };
 
+  const saveShippingInfo = async (shippingInfo) => {
+    if (user) {
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, { shippingInfo }, { merge: true });
+    } else {
+      console.log('No user logged in. Shipping info not saved.');
+    }
+  };
+
+  const savePaymentInfo = async (paymentInfo) => {
+    if (user) {
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, { paymentInfo }, { merge: true });
+    } else {
+      console.log('No user logged in. Payment info not saved.');
+    }
+  };
+
+  const fetchUserInfo = async () => {
+    if (user) {
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        return userSnap.data();
+      }
+    }
+    return null;
+  };
+
+
+  const fetchUserOrders = async () => {
+    if (user) {
+      const ordersRef = collection(db, 'orders');
+      const q = query(ordersRef, where("userId", "==", user.uid), orderBy("createdAt", "desc"));
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+    return [];
+  };
+
+
+  const createOrder = async (orderDetails) => {
+    if (user) {
+      const orderRef = await addDoc(collection(db, 'orders'), {
+        userId: user.uid,
+        ...orderDetails,
+        createdAt: new Date()
+      });
+      return orderRef.id;
+    }
+    return null;
+  };
+
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -182,8 +236,11 @@ const AppContent = () => {
         <Route path="/" element={<ProductList products={products} />} />
         <Route path="/product/:id" element={<ProductPage products={products} addToCart={addToCart} />} />
         <Route path="/cart" element={<Cart cart={cart} removeFromCart={removeFromCart} />} />
-        <Route path="/shipping" element={<Shipping />} />
-        <Route path="/payment" element={<Payment updateCart={updateCart} />} />
+   
+        <Route path="/shipping" element={<Shipping saveShippingInfo={saveShippingInfo} fetchUserInfo={fetchUserInfo} trackEvent={trackEvent} />} />
+        <Route path="/payment" element={<Payment updateCart={updateCart} savePaymentInfo={savePaymentInfo} createOrder={createOrder} fetchUserInfo={fetchUserInfo} cart={cart} trackEvent={trackEvent} />} />
+        <Route path="/orders" element={<OrderHistory fetchUserOrders={fetchUserOrders} />} />
+
       </Routes>
     </div>
   );
@@ -295,69 +352,199 @@ const Cart = ({ cart, removeFromCart }) => {
   );
 };
 
-const Shipping = () => {
-  const { trackEvent } = useAnalytics();
+const Shipping = ({ saveShippingInfo, fetchUserInfo, trackEvent }) => {
+  const navigate = useNavigate();
+  const [shippingInfo, setShippingInfo] = useState({ name: '', address: '' });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      const userInfo = await fetchUserInfo();
+      if (userInfo && userInfo.shippingInfo) {
+        setShippingInfo(userInfo.shippingInfo);
+      }
+      setLoading(false);
+    };
+    loadUserInfo();
+  }, [fetchUserInfo]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await saveShippingInfo(shippingInfo);
+      trackEvent('add_shipping_info', 'Ecommerce', 'Add Shipping Info');
+      navigate('/payment');
+    } catch (error) {
+      console.error('Error saving shipping info:', error);
+    }
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Shipping Information</h1>
-      <form className="space-y-4">
+      <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
           <label htmlFor="name" className="block mb-1">Name</label>
-          <input type="text" id="name" className="w-full border rounded px-2 py-1" required />
+          <input
+            type="text"
+            id="name"
+            className="w-full border rounded px-2 py-1"
+            required
+            value={shippingInfo.name}
+            onChange={(e) => setShippingInfo({...shippingInfo, name: e.target.value})}
+          />
         </div>
         <div>
           <label htmlFor="address" className="block mb-1">Address</label>
-          <input type="text" id="address" className="w-full border rounded px-2 py-1" required />
+          <input
+            type="text"
+            id="address"
+            className="w-full border rounded px-2 py-1"
+            required
+            value={shippingInfo.address}
+            onChange={(e) => setShippingInfo({...shippingInfo, address: e.target.value})}
+          />
         </div>
-        <Link
-          to="/payment"
-          className="inline-block bg-blue-500 text-white px-4 py-2 rounded"
-          onClick={() => trackEvent('add_shipping_info', 'Ecommerce', 'Add Shipping Info')}
+        <button
+          type="submit"
+          className="bg-blue-500 text-white px-4 py-2 rounded"
         >
           Proceed to Payment
-        </Link>
+        </button>
       </form>
     </div>
   );
 };
 
-const Payment = ({ updateCart }) => {
+const Payment = ({ updateCart, savePaymentInfo, createOrder, fetchUserInfo, cart, trackEvent }) => {
   const navigate = useNavigate();
-  const { trackEvent } = useAnalytics();
+  const [paymentInfo, setPaymentInfo] = useState({ cardNumber: '', expiryDate: '', cvv: '' });
+  const [loading, setLoading] = useState(true);
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      const userInfo = await fetchUserInfo();
+      if (userInfo && userInfo.paymentInfo) {
+        setPaymentInfo(userInfo.paymentInfo);
+      }
+      setLoading(false);
+    };
+    loadUserInfo();
+  }, [fetchUserInfo]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert('Order placed successfully!');
-    trackEvent('purchase', 'Ecommerce', 'Purchase Complete');
-    updateCart([]);
-    navigate('/');
+    try {
+      await savePaymentInfo(paymentInfo);
+      const orderDetails = {
+        items: cart,
+        total: cart.reduce((total, item) => total + item.price, 0),
+        status: 'pending'
+      };
+      const orderId = await createOrder(orderDetails);
+      trackEvent('purchase', 'Ecommerce', 'Purchase Complete', orderDetails.total);
+      alert(`Order placed successfully! Order ID: ${orderId}`);
+      updateCart([]);
+      navigate('/');
+    } catch (error) {
+      console.error('Error processing payment:', error);
+    }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Payment Information</h1>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label htmlFor="card" className="block mb-1">Card Number</label>
-          <input type="text" id="card" className="w-full border rounded px-2 py-1" required />
+          <label htmlFor="cardNumber" className="block mb-1">Card Number</label>
+          <input
+            type="text"
+            id="cardNumber"
+            className="w-full border rounded px-2 py-1"
+            required
+            value={paymentInfo.cardNumber}
+            onChange={(e) => setPaymentInfo({...paymentInfo, cardNumber: e.target.value})}
+          />
         </div>
         <div>
-          <label htmlFor="expiry" className="block mb-1">Expiry Date</label>
-          <input type="text" id="expiry" className="w-full border rounded px-2 py-1" required />
+          <label htmlFor="expiryDate" className="block mb-1">Expiry Date</label>
+          <input
+            type="text"
+            id="expiryDate"
+            className="w-full border rounded px-2 py-1"
+            required
+            value={paymentInfo.expiryDate}
+            onChange={(e) => setPaymentInfo({...paymentInfo, expiryDate: e.target.value})}
+          />
         </div>
         <div>
           <label htmlFor="cvv" className="block mb-1">CVV</label>
-          <input type="text" id="cvv" className="w-full border rounded px-2 py-1" required />
+          <input
+            type="text"
+            id="cvv"
+            className="w-full border rounded px-2 py-1"
+            required
+            value={paymentInfo.cvv}
+            onChange={(e) => setPaymentInfo({...paymentInfo, cvv: e.target.value})}
+          />
         </div>
         <button
           type="submit"
           className="bg-green-500 text-white px-4 py-2 rounded"
-          onClick={() => trackEvent('add_payment_info', 'Ecommerce', 'Add Payment Info')}
         >
           Complete Order
         </button>
       </form>
+    </div>
+  );
+};
+
+const OrderHistory = ({ fetchUserOrders }) => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      const userOrders = await fetchUserOrders();
+      setOrders(userOrders);
+      setLoading(false);
+    };
+    loadOrders();
+  }, [fetchUserOrders]);
+
+  if (loading) {
+    return <div>Loading orders...</div>;
+  }
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-4">Order History</h1>
+      {orders.length === 0 ? (
+        <p>You haven't placed any orders yet.</p>
+      ) : (
+        orders.map((order) => (
+          <div key={order.id} className="border p-4 mb-4 rounded">
+            <h2 className="text-xl font-bold">Order ID: {order.id}</h2>
+            <p>Date: {new Date(order.createdAt.seconds * 1000).toLocaleDateString()}</p>
+            <p>Status: {order.status}</p>
+            <p>Total: ${order.total.toFixed(2)}</p>
+            <h3 className="font-bold mt-2">Items:</h3>
+            <ul>
+              {order.items.map((item, index) => (
+                <li key={index}>{item.name} - ${item.price.toFixed(2)}</li>
+              ))}
+            </ul>
+          </div>
+        ))
+      )}
     </div>
   );
 };
