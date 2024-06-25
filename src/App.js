@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { db, storage, auth } from './firebase';
 import { collection, getDocs, doc, setDoc, getDoc, updateDoc, addDoc, query, where, orderBy } from 'firebase/firestore';
@@ -216,7 +216,8 @@ const AppContent = () => {
     <div className="container mx-auto p-4">
       <nav className="mb-4 flex justify-between items-center">
         <Link to="/" className="text-blue-500 hover:text-blue-700 text-xl font-bold">
-          Magifactory
+        <img src="/logo.svg" alt="MagiFactory" className="h-8 w-auto" />
+
         </Link>
         <div className="flex items-center">
           <Link to="/cart" className="text-blue-500 hover:text-blue-700 mr-4">
@@ -233,10 +234,11 @@ const AppContent = () => {
         </div>
       </nav>
       <Routes>
-        <Route path="/" element={<ProductList products={products} />} />
+      <Route path="/" element={<LandingPage products={products} />} />
         <Route path="/product/:id" element={<ProductPage products={products} addToCart={addToCart} />} />
         <Route path="/cart" element={<Cart cart={cart} removeFromCart={removeFromCart} />} />
-   
+           <Route path="/" element={<LandingPage products={products} />} />
+
         <Route path="/shipping" element={<Shipping saveShippingInfo={saveShippingInfo} fetchUserInfo={fetchUserInfo} trackEvent={trackEvent} />} />
         <Route path="/payment" element={<Payment updateCart={updateCart} savePaymentInfo={savePaymentInfo} createOrder={createOrder} fetchUserInfo={fetchUserInfo} cart={cart} trackEvent={trackEvent} />} />
         <Route path="/orders" element={<OrderHistory fetchUserOrders={fetchUserOrders} />} />
@@ -246,32 +248,58 @@ const AppContent = () => {
   );
 };
 
-const ProductList = ({ products, trackEvent }) => {
+const LandingPage = ({ products }) => {
+  const productListRef = useRef(null);
+
+  const scrollToProducts = () => {
+    productListRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {products.map((product) => (
-        <div key={product.id} className="border p-4 rounded">
-          <Link
-            to={`/product/${product.id}`}
-            className="cursor-pointer"
-            onClick={() => trackEvent('view_item', 'Ecommerce', product.name, product.price)}
-          >
-            <div className="w-full h-96 overflow-hidden mb-2">
-              <img 
-                src={product.imageUrl} 
-                alt={product.name} 
-                className="w-full h-full object-cover object-top"
-              />
-            </div>
-            <h2 className="text-xl font-bold">{product.name}</h2>
-            <p className="text-gray-600">${product.price.toFixed(2)}</p>
-          </Link>
-        </div>
-      ))}
+    <div>
+      <HeroSection scrollToProducts={scrollToProducts} />
+      <ProductGrid products={products} ref={productListRef} />
     </div>
   );
 };
 
+const HeroSection = ({ scrollToProducts }) => {
+  return (
+    <div className="bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex items-center">
+        <div className="w-1/2 pr-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Bring your creations to life with MagiFactory</h1>
+          <p className="text-xl text-gray-600 mb-6">Design and create custom, one-of-a-kind items with AI. Share your creations and turn most popular designs into real products. Unleash your creativity today!</p>
+          <button 
+            onClick={scrollToProducts}
+            className="bg-blue-600 text-white px-6 py-3 rounded-md text-lg font-semibold hover:bg-blue-700 transition duration-300"
+          >
+            GET STARTED
+          </button>
+        </div>
+        <div className="w-1/2">
+          <img src="https://www.magifactory.com/tshirt.jpg" alt="Custom T-shirt design" className="w-full rounded-lg shadow-lg" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ProductGrid = React.forwardRef(({ products }, ref) => {
+  return (
+    <div ref={ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {products.map((product) => (
+          <Link key={product.id} to={`/product/${product.id}`} className="block">
+            <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition duration-300">
+              <img src={product.imageUrl} alt={product.name} className="w-full h-64 object-cover" />
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+});
 
 const ProductPage = ({ products, addToCart }) => {
   const { id } = useParams();
