@@ -268,8 +268,8 @@ const HeroSection = ({ scrollToProducts }) => {
     <div className="bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex items-center">
         <div className="w-1/2 pr-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Bring your creations to life with MagiFactory</h1>
-          <p className="text-xl text-gray-600 mb-6">Design and create custom, one-of-a-kind items with AI. Share your creations and turn most popular designs into real products. Unleash your creativity today!</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Bring AI-designed t-shirts to life with MagiFactory</h1>
+          <p className="text-xl text-gray-600 mb-6">Our AI bot creates a unique t-shirt design every minute. Team up with friends to vote on your favorites and turn virtual designs into real, wearable art. Join the AI fashion revolution today!</p>
           <button 
             onClick={scrollToProducts}
             className="bg-blue-600 text-white px-6 py-3 rounded-md text-lg font-semibold hover:bg-blue-700 transition duration-300"
