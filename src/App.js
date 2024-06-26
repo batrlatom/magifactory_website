@@ -533,6 +533,48 @@ const Cart = ({ cart, removeFromCart }) => {
   const navigate = useNavigate();
   const { trackEvent } = useAnalytics();
 
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-4">Cart</h1>
+      {cart.length === 0 ? (
+        <div>
+          <p>Your cart is empty.</p>
+          <Link to="/" className="bg-blue-500 text-white px-4 py-2 rounded mt-4 inline-block">
+            Continue Shopping
+          </Link>
+        </div>
+      ) : (
+        <>
+          {/* ... (existing cart item rendering) */}
+          <div className="mt-4">
+            <p className="font-bold text-xl mb-4">
+              Total: ${cart.reduce((total, item) => total + item.price, 0).toFixed(2)}
+            </p>
+            <div className="flex justify-between">
+              <Link to="/" className="flex items-center text-blue-500 hover:text-blue-700">
+                <ArrowLeft className="mr-2" size={20} />
+                Continue Shopping
+              </Link>
+              <Link
+                to="/shipping"
+                className="bg-blue-500 text-white px-4 py-2 rounded"
+                onClick={() => trackEvent('begin_checkout', 'Ecommerce', 'Begin Checkout', cart.reduce((total, item) => total + item.price, 0))}
+              >
+                Proceed to Checkout
+              </Link>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+/*
+const Cart = ({ cart, removeFromCart }) => {
+  const navigate = useNavigate();
+  const { trackEvent } = useAnalytics();
+
   useEffect(() => {
     if (cart.length === 0) {
       navigate('/');
@@ -543,44 +585,8 @@ const Cart = ({ cart, removeFromCart }) => {
     return null;
   }
 
-  return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Cart</h1>
-      {cart.map((item, index) => (
-        <div key={index} className="flex items-center mb-4 border-b pb-2">
-          <img src={item.imageUrl} alt={item.name} className="w-16 h-16 object-cover mr-4" />
-          <div className="flex-grow">
-            <h3 className="font-bold">{item.name}</h3>
-            <p className="text-gray-600">${item.price.toFixed(2)}</p>
-          </div>
-          <button
-            onClick={() => removeFromCart(index)}
-            className="bg-red-500 text-white px-2 py-1 rounded"
-          >
-            Remove
-          </button>
-        </div>
-      ))}
-      <div className="mt-4">
-        <p className="font-bold text-xl mb-4">
-          Total: ${cart.reduce((total, item) => total + item.price, 0).toFixed(2)}
-        </p>
-        <div className="flex justify-between">
-          <Link to="/" className="bg-gray-500 text-white px-4 py-2 rounded">
-            Continue Shopping
-          </Link>
-          <Link
-            to="/shipping"
-            className="bg-blue-500 text-white px-4 py-2 rounded"
-            onClick={() => trackEvent('begin_checkout', 'Ecommerce', 'Begin Checkout', cart.reduce((total, item) => total + item.price, 0))}
-          >
-            Proceed to Checkout
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-};
+  
+};*/
 
 
 const europeanCountries = [
