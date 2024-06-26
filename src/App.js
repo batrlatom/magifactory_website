@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { db, storage, auth } from './firebase';
-import { collection, getDocs, doc, setDoc, getDoc, updateDoc, addDoc, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, getDoc, updateDoc, addDoc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 
@@ -33,6 +33,36 @@ const useAnalytics = () => {
   return { trackEvent };
 };
 
+// Custom hook for real-time data fetching
+const useRealtimeCollection = (collectionName, queryConstraints = []) => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const collectionRef = collection(db, collectionName);
+    const q = query(collectionRef, ...queryConstraints);
+
+    const unsubscribe = onSnapshot(q,
+      (snapshot) => {
+        const fetchedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setData(fetchedData);
+        setLoading(false);
+      },
+      (err) => {
+        console.error(`Error fetching ${collectionName}:`, err);
+        setError(err);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [collectionName, JSON.stringify(queryConstraints)]);
+
+  return { data, loading, error };
+};
+
+
 // Main App component
 const App = () => {
   return (
@@ -44,11 +74,14 @@ const App = () => {
 
 // AppContent component (wrapped by Router)
 const AppContent = () => {
-  const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const { trackEvent } = useAnalytics();
+  const [products, setProducts] = useState([]);
+
+  // Use the custom hook for real-time products fetching
+  const { data: rawProducts, loading: productsLoading, error: productsError } = useRealtimeCollection('products');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -61,36 +94,33 @@ const AppContent = () => {
       setLoading(false);
     });
 
-    fetchProducts();
-
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (rawProducts.length > 0) {
+      fetchProductImages();
+    }
+  }, [rawProducts]);
 
-  const fetchProducts = async () => {
-    const productsCollection = collection(db, 'products');
-    const productsSnapshot = await getDocs(productsCollection);
-    const productsList = await Promise.all(productsSnapshot.docs.map(async (doc) => {
-      const data = doc.data();
+  const fetchProductImages = async () => {
+    const productsWithImages = await Promise.all(rawProducts.map(async (product) => {
       let imageUrl = '/placeholder-image.jpg';
-      if (data.imagePath && typeof data.imagePath === 'string' && data.imagePath.trim() !== '') {
+      if (product.imagePath && typeof product.imagePath === 'string' && product.imagePath.trim() !== '') {
         try {
-          const imageRef = ref(storage, data.imagePath.trim());
+          const imageRef = ref(storage, product.imagePath.trim());
           imageUrl = await getDownloadURL(imageRef);
         } catch (error) {
-          console.error(`Error fetching image URL for product ${doc.id}:`, error);
+          console.error(`Error fetching image URL for product ${product.id}:`, error);
         }
       } else {
-        console.warn(`Invalid or missing imagePath for product ${doc.id}`);
+        console.warn(`Invalid or missing imagePath for product ${product.id}`);
       }
-      return {
-        id: doc.id,
-        ...data,
-        imageUrl
-      };
+      return { ...product, imageUrl };
     }));
-    setProducts(productsList);
+    setProducts(productsWithImages);
   };
+
 
   const fetchUserCart = async (userId) => {
     const userCartRef = doc(db, 'carts', userId);
@@ -216,7 +246,7 @@ const AppContent = () => {
     <div className="container mx-auto p-4">
       <nav className="mb-4 flex justify-between items-center">
         <Link to="/" className="text-blue-500 hover:text-blue-700 text-xl font-bold">
-        <img src="/logo.svg" alt="MagiFactory" className="h-8 w-auto" />
+          <img src="/logo.svg" alt="MagiFactory" className="h-8 w-auto" />
 
         </Link>
         <div className="flex items-center">
@@ -234,10 +264,10 @@ const AppContent = () => {
         </div>
       </nav>
       <Routes>
-      <Route path="/" element={<LandingPage products={products} />} />
+        <Route path="/" element={<LandingPage products={products} />} />
         <Route path="/product/:id" element={<ProductPage products={products} addToCart={addToCart} />} />
         <Route path="/cart" element={<Cart cart={cart} removeFromCart={removeFromCart} />} />
-           <Route path="/" element={<LandingPage products={products} />} />
+        <Route path="/" element={<LandingPage products={products} />} />
 
         <Route path="/shipping" element={<Shipping saveShippingInfo={saveShippingInfo} fetchUserInfo={fetchUserInfo} trackEvent={trackEvent} />} />
         <Route path="/payment" element={<Payment updateCart={updateCart} savePaymentInfo={savePaymentInfo} createOrder={createOrder} fetchUserInfo={fetchUserInfo} cart={cart} trackEvent={trackEvent} />} />
@@ -270,7 +300,7 @@ const HeroSection = ({ scrollToProducts }) => {
         <div className="w-1/2 pr-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Bring AI-designed t-shirts to life with MagiFactory</h1>
           <p className="text-xl text-gray-600 mb-6">Our AI bot creates a unique t-shirt design every minute. Team up with friends to vote on your favorites and turn virtual designs into real, wearable art. Join the AI fashion revolution today!</p>
-          <button 
+          <button
             onClick={scrollToProducts}
             className="bg-blue-600 text-white px-6 py-3 rounded-md text-lg font-semibold hover:bg-blue-700 transition duration-300"
           >
@@ -356,7 +386,7 @@ const Cart = ({ cart, removeFromCart }) => {
             <h3 className="font-bold">{item.name}</h3>
             <p className="text-gray-600">${item.price.toFixed(2)}</p>
           </div>
-          <button 
+          <button
             onClick={() => removeFromCart(index)}
             className="bg-red-500 text-white px-2 py-1 rounded"
           >
@@ -428,7 +458,7 @@ const Shipping = ({ saveShippingInfo, fetchUserInfo, trackEvent }) => {
             className="w-full border rounded px-2 py-1"
             required
             value={shippingInfo.name}
-            onChange={(e) => setShippingInfo({...shippingInfo, name: e.target.value})}
+            onChange={(e) => setShippingInfo({ ...shippingInfo, name: e.target.value })}
           />
         </div>
         <div>
@@ -439,7 +469,7 @@ const Shipping = ({ saveShippingInfo, fetchUserInfo, trackEvent }) => {
             className="w-full border rounded px-2 py-1"
             required
             value={shippingInfo.address}
-            onChange={(e) => setShippingInfo({...shippingInfo, address: e.target.value})}
+            onChange={(e) => setShippingInfo({ ...shippingInfo, address: e.target.value })}
           />
         </div>
         <button
@@ -504,7 +534,7 @@ const Payment = ({ updateCart, savePaymentInfo, createOrder, fetchUserInfo, cart
             className="w-full border rounded px-2 py-1"
             required
             value={paymentInfo.cardNumber}
-            onChange={(e) => setPaymentInfo({...paymentInfo, cardNumber: e.target.value})}
+            onChange={(e) => setPaymentInfo({ ...paymentInfo, cardNumber: e.target.value })}
           />
         </div>
         <div>
@@ -515,7 +545,7 @@ const Payment = ({ updateCart, savePaymentInfo, createOrder, fetchUserInfo, cart
             className="w-full border rounded px-2 py-1"
             required
             value={paymentInfo.expiryDate}
-            onChange={(e) => setPaymentInfo({...paymentInfo, expiryDate: e.target.value})}
+            onChange={(e) => setPaymentInfo({ ...paymentInfo, expiryDate: e.target.value })}
           />
         </div>
         <div>
@@ -526,7 +556,7 @@ const Payment = ({ updateCart, savePaymentInfo, createOrder, fetchUserInfo, cart
             className="w-full border rounded px-2 py-1"
             required
             value={paymentInfo.cvv}
-            onChange={(e) => setPaymentInfo({...paymentInfo, cvv: e.target.value})}
+            onChange={(e) => setPaymentInfo({ ...paymentInfo, cvv: e.target.value })}
           />
         </div>
         <button
