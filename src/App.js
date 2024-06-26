@@ -434,8 +434,8 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <button 
-        onClick={() => navigate('/')} 
+      <button
+        onClick={() => navigate('/')}
         className="mb-4 flex items-center text-blue-500 hover:text-blue-700"
       >
         <ArrowLeft className="mr-2" size={20} />
@@ -445,75 +445,81 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
         <div className="md:w-1/2">
           <img src={product.imageUrl} alt={product.name} className="w-full h-auto object-contain rounded-lg shadow-md" />
         </div>
-        <div className="md:w-1/6">
+
+        <div className="md:w-1/2">
           <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
-          <p className="text-gray-600 mb-4">{product.description}</p>
-          <p className="text-2xl font-bold text-green-600 mb-4">${product.price.toFixed(2)}</p>
+          <div className="md:w-1/3">
 
-          <button
-            onClick={() => {
-              addToCart(product);
-              navigate('/cart');
-            }}
-            className="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition duration-300 mb-6"
-          >
-            Add to Cart
-          </button>
-          
-          {/* Improved voting block */}
-          <div className="flex items-center space-x-4 mb-6 bg-gray-100 p-3 rounded-lg">
+            <p className="text-gray-600 mb-4">{product.description}</p>
+            <p className="text-2xl font-bold text-green-600 mb-4">${product.price.toFixed(2)}</p>
+
             <button
-              onClick={() => handleVote(product.id)}
-              className={`flex items-center justify-center px-4 py-2 rounded-full ${
-                hasVoted ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-300 hover:bg-blue-500'
-              } text-white transition duration-300`}
-              disabled={hasVoted}
+              onClick={() => {
+                addToCart(product);
+                navigate('/cart');
+              }}
+              className="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition duration-300 mb-6"
             >
-              <ThumbsUp className="mr-2" size={18} />
-              {hasVoted ? 'Voted' : 'Vote'}
+              Add to Cart
             </button>
-            <span className="text-lg font-semibold">{product.voteCount || 0} votes</span>
-          </div>
 
-  
-          
-          {/* Improved sharing block */}
-          <div className="mt-6">
-            <p className="text-lg font-semibold mb-3">Share this product:</p>
-            <div className="flex space-x-3">
+            {/* Improved voting block */}
+            <div className="flex items-center space-x-4 mb-6 bg-gray-100 p-3 rounded-lg">
               <button
-                onClick={() => handleShare('twitter')}
-                className="p-2 bg-blue-400 text-white rounded-full hover:bg-blue-500 transition duration-300"
-                aria-label="Share on Twitter"
+                onClick={() => handleVote(product.id)}
+                className={`flex items-center justify-center px-4 py-2 rounded-full ${hasVoted ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-300 hover:bg-blue-500'
+                  } text-white transition duration-300`}
+                disabled={hasVoted}
               >
-                <Twitter size={20} />
+                <ThumbsUp className="mr-2" size={18} />
+                {hasVoted ? 'Voted' : 'Vote'}
               </button>
-              <button
-                onClick={() => handleShare('facebook')}
-                className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition duration-300"
-                aria-label="Share on Facebook"
-              >
-                <Facebook size={20} />
-              </button>
-              <button
-                onClick={() => handleShare('whatsapp')}
-                className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition duration-300"
-                aria-label="Share on WhatsApp"
-              >
-                <Share2 size={20} />
-              </button>
-              {navigator.share && (
+              <span className="text-lg font-semibold">{product.voteCount || 0} votes</span>
+            </div>
+
+
+
+            {/* Improved sharing block */}
+            <div className="mt-6">
+              <p className="text-lg font-semibold mb-3">Share this product:</p>
+              <div className="flex space-x-3">
                 <button
-                  onClick={() => handleShare('native')}
-                  className="p-2 bg-gray-500 text-white rounded-full hover:bg-gray-600 transition duration-300"
-                  aria-label="Share"
+                  onClick={() => handleShare('twitter')}
+                  className="p-2 text-blue-600 rounded-full  transition duration-300"
+                  aria-label="Share on Twitter"
+                >
+                  <Twitter size={20} />
+                </button>
+                <button
+                  onClick={() => handleShare('facebook')}
+                  className="p-2 text-blue-600 rounded-full  transition duration-300"
+                  aria-label="Share on Facebook"
+                >
+                  <Facebook size={20} />
+                </button>
+                <button
+                  onClick={() => handleShare('whatsapp')}
+                  className="p-2  text-blue-600 rounded-full transition duration-300"
+                  aria-label="Share on WhatsApp"
                 >
                   <Share2 size={20} />
                 </button>
-              )}
+                {navigator.share && (
+                  <button
+                    onClick={() => handleShare('native')}
+                    className="p-2 bg-gray-500 text-white rounded-full  transition duration-300"
+                    aria-label="Share"
+                  >
+                    <Share2 size={20} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
+
+
+
       </div>
     </div>
   );
