@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+
+
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import { db, storage, auth } from './firebase';
@@ -580,21 +582,46 @@ const Cart = ({ cart, removeFromCart }) => {
   );
 };
 
+
+const europeanCountries = [
+  "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czech Republic",
+  "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary",
+  "Ireland", "Italy", "Latvia", "Lithuania", "Luxembourg", "Malta", "Netherlands",
+  "Poland", "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden",
+  "United Kingdom" // Included for shipping purposes
+];
+
+const allCountries = [...europeanCountries, "United States"].sort();
+
 const Shipping = ({ saveShippingInfo, fetchUserInfo, trackEvent }) => {
   const navigate = useNavigate();
-  const [shippingInfo, setShippingInfo] = useState({ name: '', address: '' });
+  const [shippingInfo, setShippingInfo] = useState({
+    firstName: '',
+    lastName: '',
+    address: '',
+    city: '',
+    country: '',
+    postalCode: '',
+    phoneNumber: '',
+    shippingMethod: 'dpd_standard'
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadUserInfo = async () => {
       const userInfo = await fetchUserInfo();
       if (userInfo && userInfo.shippingInfo) {
-        setShippingInfo(userInfo.shippingInfo);
+        setShippingInfo(prevState => ({ ...prevState, ...userInfo.shippingInfo }));
       }
       setLoading(false);
     };
     loadUserInfo();
   }, [fetchUserInfo]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setShippingInfo(prevState => ({ ...prevState, [name]: value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -612,34 +639,120 @@ const Shipping = ({ saveShippingInfo, fetchUserInfo, trackEvent }) => {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Shipping Information</h1>
+    <div className="max-w-2xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6">Shipping Information</h1>
       <form className="space-y-4" onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="name" className="block mb-1">Name</label>
-          <input
-            type="text"
-            id="name"
-            className="w-full border rounded px-2 py-1"
-            required
-            value={shippingInfo.name}
-            onChange={(e) => setShippingInfo({ ...shippingInfo, name: e.target.value })}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="firstName" className="block mb-1 font-medium">First Name</label>
+            <input
+              type="text"
+              id="firstName"
+              name="firstName"
+              className="w-full border rounded px-3 py-2"
+              required
+              value={shippingInfo.firstName}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <label htmlFor="lastName" className="block mb-1 font-medium">Last Name</label>
+            <input
+              type="text"
+              id="lastName"
+              name="lastName"
+              className="w-full border rounded px-3 py-2"
+              required
+              value={shippingInfo.lastName}
+              onChange={handleChange}
+            />
+          </div>
         </div>
         <div>
-          <label htmlFor="address" className="block mb-1">Address</label>
+          <label htmlFor="address" className="block mb-1 font-medium">Address</label>
           <input
             type="text"
             id="address"
-            className="w-full border rounded px-2 py-1"
+            name="address"
+            className="w-full border rounded px-3 py-2"
             required
             value={shippingInfo.address}
-            onChange={(e) => setShippingInfo({ ...shippingInfo, address: e.target.value })}
+            onChange={handleChange}
           />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="city" className="block mb-1 font-medium">City</label>
+            <input
+              type="text"
+              id="city"
+              name="city"
+              className="w-full border rounded px-3 py-2"
+              required
+              value={shippingInfo.city}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <label htmlFor="country" className="block mb-1 font-medium">Country</label>
+            <select
+              id="country"
+              name="country"
+              className="w-full border rounded px-3 py-2"
+              required
+              value={shippingInfo.country}
+              onChange={handleChange}
+            >
+              <option value="">Select a country</option>
+              {allCountries.map(country => (
+                <option key={country} value={country}>{country}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="postalCode" className="block mb-1 font-medium">Postal Code</label>
+            <input
+              type="text"
+              id="postalCode"
+              name="postalCode"
+              className="w-full border rounded px-3 py-2"
+              required
+              value={shippingInfo.postalCode}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <label htmlFor="phoneNumber" className="block mb-1 font-medium">Phone Number</label>
+            <input
+              type="tel"
+              id="phoneNumber"
+              name="phoneNumber"
+              className="w-full border rounded px-3 py-2"
+              required
+              value={shippingInfo.phoneNumber}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+        <div>
+          <label htmlFor="shippingMethod" className="block mb-1 font-medium">Shipping Method</label>
+          <select
+            id="shippingMethod"
+            name="shippingMethod"
+            className="w-full border rounded px-3 py-2"
+            required
+            value={shippingInfo.shippingMethod}
+            onChange={handleChange}
+          >
+            <option value="dpd_standard">DPD (3-5 business days)</option>
+            <option value="dhl_standard">DHL (3-5 business days)</option>
+          </select>
         </div>
         <button
           type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded"
+          className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300"
         >
           Proceed to Payment
         </button>
@@ -648,21 +761,48 @@ const Shipping = ({ saveShippingInfo, fetchUserInfo, trackEvent }) => {
   );
 };
 
-const Payment = ({ updateCart, savePaymentInfo, createOrder, fetchUserInfo, cart, trackEvent }) => {
+const Payment = ({ savePaymentInfo, createOrder, fetchUserInfo, cart, trackEvent }) => {
   const navigate = useNavigate();
-  const [paymentInfo, setPaymentInfo] = useState({ cardNumber: '', expiryDate: '', cvv: '' });
+  const [paymentInfo, setPaymentInfo] = useState({
+    cardholderName: '',
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    billingAddress: {
+      street: '',
+      city: '',
+      country: '',
+      postalCode: ''
+    }
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadUserInfo = async () => {
       const userInfo = await fetchUserInfo();
       if (userInfo && userInfo.paymentInfo) {
-        setPaymentInfo(userInfo.paymentInfo);
+        setPaymentInfo(prevState => ({ ...prevState, ...userInfo.paymentInfo }));
       }
       setLoading(false);
     };
     loadUserInfo();
   }, [fetchUserInfo]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name.startsWith('billing')) {
+      const billingField = name.split('.')[1];
+      setPaymentInfo(prevState => ({
+        ...prevState,
+        billingAddress: {
+          ...prevState.billingAddress,
+          [billingField]: value
+        }
+      }));
+    } else {
+      setPaymentInfo(prevState => ({ ...prevState, [name]: value }));
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -676,8 +816,7 @@ const Payment = ({ updateCart, savePaymentInfo, createOrder, fetchUserInfo, cart
       const orderId = await createOrder(orderDetails);
       trackEvent('purchase', 'Ecommerce', 'Purchase Complete', orderDetails.total);
       alert(`Order placed successfully! Order ID: ${orderId}`);
-      updateCart([]);
-      navigate('/');
+      navigate('/order-confirmation', { state: { orderId } });
     } catch (error) {
       console.error('Error processing payment:', error);
     }
@@ -688,47 +827,133 @@ const Payment = ({ updateCart, savePaymentInfo, createOrder, fetchUserInfo, cart
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Payment Information</h1>
+    <div className="max-w-2xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6">Payment Information</h1>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label htmlFor="cardNumber" className="block mb-1">Card Number</label>
+          <label htmlFor="cardholderName" className="block mb-1 font-medium">Cardholder Name</label>
+          <input
+            type="text"
+            id="cardholderName"
+            name="cardholderName"
+            className="w-full border rounded px-3 py-2"
+            required
+            value={paymentInfo.cardholderName}
+            onChange={handleChange}
+          />
+        </div>
+        <div>
+          <label htmlFor="cardNumber" className="block mb-1 font-medium">Card Number</label>
           <input
             type="text"
             id="cardNumber"
-            className="w-full border rounded px-2 py-1"
+            name="cardNumber"
+            className="w-full border rounded px-3 py-2"
             required
             value={paymentInfo.cardNumber}
-            onChange={(e) => setPaymentInfo({ ...paymentInfo, cardNumber: e.target.value })}
+            onChange={handleChange}
+            placeholder="1234 5678 9012 3456"
           />
         </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="expiryDate" className="block mb-1 font-medium">Expiry Date</label>
+            <input
+              type="text"
+              id="expiryDate"
+              name="expiryDate"
+              className="w-full border rounded px-3 py-2"
+              required
+              value={paymentInfo.expiryDate}
+              onChange={handleChange}
+              placeholder="MM/YY"
+            />
+          </div>
+          <div>
+            <label htmlFor="cvv" className="block mb-1 font-medium">CVV</label>
+            <input
+              type="text"
+              id="cvv"
+              name="cvv"
+              className="w-full border rounded px-3 py-2"
+              required
+              value={paymentInfo.cvv}
+              onChange={handleChange}
+              placeholder="123"
+            />
+          </div>
+        </div>
+        <h2 className="text-2xl font-bold mt-6 mb-4">Billing Address</h2>
         <div>
-          <label htmlFor="expiryDate" className="block mb-1">Expiry Date</label>
+          <label htmlFor="billing.street" className="block mb-1 font-medium">Street Address</label>
           <input
             type="text"
-            id="expiryDate"
-            className="w-full border rounded px-2 py-1"
+            id="billing.street"
+            name="billing.street"
+            className="w-full border rounded px-3 py-2"
             required
-            value={paymentInfo.expiryDate}
-            onChange={(e) => setPaymentInfo({ ...paymentInfo, expiryDate: e.target.value })}
+            value={paymentInfo.billingAddress.street}
+            onChange={handleChange}
           />
         </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="billing.city" className="block mb-1 font-medium">City</label>
+            <input
+              type="text"
+              id="billing.city"
+              name="billing.city"
+              className="w-full border rounded px-3 py-2"
+              required
+              value={paymentInfo.billingAddress.city}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <label htmlFor="billing.country" className="block mb-1 font-medium">Country</label>
+            <input
+              type="text"
+              id="billing.country"
+              name="billing.country"
+              className="w-full border rounded px-3 py-2"
+              required
+              value={paymentInfo.billingAddress.country}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
         <div>
-          <label htmlFor="cvv" className="block mb-1">CVV</label>
+          <label htmlFor="billing.postalCode" className="block mb-1 font-medium">Postal Code</label>
           <input
             type="text"
-            id="cvv"
-            className="w-full border rounded px-2 py-1"
+            id="billing.postalCode"
+            name="billing.postalCode"
+            className="w-full border rounded px-3 py-2"
             required
-            value={paymentInfo.cvv}
-            onChange={(e) => setPaymentInfo({ ...paymentInfo, cvv: e.target.value })}
+            value={paymentInfo.billingAddress.postalCode}
+            onChange={handleChange}
           />
+        </div>
+        <div className="mt-6">
+          <h2 className="text-2xl font-bold mb-4">Order Summary</h2>
+          <div className="border-t border-b py-4">
+            {cart.map((item, index) => (
+              <div key={index} className="flex justify-between items-center mb-2">
+                <span>{item.name}</span>
+                <span>${item.price.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between items-center font-bold text-lg mt-4">
+            <span>Total:</span>
+            <span>${cart.reduce((total, item) => total + item.price, 0).toFixed(2)}</span>
+          </div>
         </div>
         <button
           type="submit"
-          className="bg-green-500 text-white px-4 py-2 rounded"
+          className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300 mt-6"
         >
-          Complete Order
+          Complete Purchase
         </button>
       </form>
     </div>

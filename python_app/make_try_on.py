@@ -94,7 +94,9 @@ try:
     doc_ref.set({
         'imagePath': f"gs://magifactory2.appspot.com/{unique_filename}",
         'name': f"Combo: {os.path.splitext(background_image)[0]} + {os.path.splitext(garment_image)[0]}",
-        'price': random.randint(1, 100)  # Random price between 1 and 100
+        'price': random.randint(1, 100),  # Random price between 1 and 100        
+        'timestamp': firestore.SERVER_TIMESTAMP  # Use Firestore server timestamp
+
     })
     print(f"Firestore document created with ID: {doc_ref.id}")
 except Exception as e:
