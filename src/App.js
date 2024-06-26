@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate, useLocation } from 'react-router-dom';
+
 import { db, storage, auth } from './firebase';
 import { collection, getDocs, doc, setDoc, getDoc, updateDoc, addDoc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { ArrowLeft, Twitter, Facebook, Share2 } from 'lucide-react';
+
 
 import './App.css';
 
@@ -334,33 +337,109 @@ const ProductGrid = React.forwardRef(({ products }, ref) => {
 const ProductPage = ({ products, addToCart }) => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { trackEvent } = useAnalytics();
   const product = products.find(p => p.id === id);
 
   if (!product) return <div>Product not found</div>;
 
+  const shareUrl = `${window.location.origin}/product/${id}`;
+  const shareText = `Check out this awesome product: ${product.name}`;
+
+  const handleShare = async (platform) => {
+    if (navigator.share && platform === 'native') {
+      try {
+        await navigator.share({
+          title: product.name,
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      let url;
+      switch (platform) {
+        case 'twitter':
+          url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+          break;
+        case 'facebook':
+          url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+          break;
+        case 'whatsapp':
+          url = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+          break;
+        default:
+          return;
+      }
+      window.open(url, '_blank');
+    }
+  };
+
+
   return (
-    <div className="flex flex-col md:flex-row gap-8">
-      <div className="md:w-1/2">
-        <img src={product.imageUrl} alt={product.name} className="w-full h-auto object-contain mb-4" />
-      </div>
-      <div className="md:w-1/2">
-        <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
-        <p className="mb-4">{product.description}</p>
-        <p className="text-2xl font-bold text-green-600 mb-4">${product.price.toFixed(2)}</p>
-        <button
-          onClick={() => {
-            addToCart(product);
-            navigate('/cart');
-          }}
-          className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          Add to Cart
-        </button>
+    <div className="max-w-7xl mx-auto">
+      <button
+        onClick={() => navigate('/')}
+        className="mb-4 flex items-center text-blue-500 hover:text-blue-700"
+      >
+        <ArrowLeft className="mr-2" size={20} />
+        Back to Products
+      </button>
+      <div className="flex flex-col md:flex-row gap-8">
+        <div className="md:w-1/2">
+          <img src={product.imageUrl} alt={product.name} className="w-full h-auto object-contain rounded-lg shadow-md" />
+        </div>
+        <div className="md:w-1/2">
+          <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
+          <p className="text-gray-600 mb-4">{product.description}</p>
+          <p className="text-2xl font-bold text-green-600 mb-4">${product.price.toFixed(2)}</p>
+          <button
+            onClick={() => {
+              addToCart(product);
+              navigate('/cart');
+            }}
+            className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition duration-300"
+          >
+            Add to Cart
+          </button>
+
+          <div className="flex space-x-4 mt-4">
+            <button
+              onClick={() => handleShare('twitter')}
+              className="text-blue-400 hover:text-blue-600"
+              aria-label="Share on Twitter"
+            >
+              <Twitter size={24} />
+            </button>
+            <button
+              onClick={() => handleShare('facebook')}
+              className="text-blue-600 hover:text-blue-800"
+              aria-label="Share on Facebook"
+            >
+              <Facebook size={24} />
+            </button>
+            <button
+              onClick={() => handleShare('whatsapp')}
+              className="text-green-500 hover:text-green-700"
+              aria-label="Share on WhatsApp"
+            >
+              <Share2 size={24} />
+            </button>
+            {navigator.share && (
+              <button
+                onClick={() => handleShare('native')}
+                className="text-gray-600 hover:text-gray-800"
+                aria-label="Share"
+              >
+                <Share2 size={24} />
+              </button>
+            )}
+          </div>
       </div>
     </div>
+    </div >
   );
 };
+
 
 const Cart = ({ cart, removeFromCart }) => {
   const navigate = useNavigate();
