@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import { db, storage, auth } from './firebase';
-import { collection, getDocs, doc, setDoc, getDoc, updateDoc, addDoc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, getDoc, updateDoc, addDoc, query, where, orderBy, onSnapshot, increment } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { ArrowLeft, Twitter, Facebook, Share2 } from 'lucide-react';
+import { ArrowLeft, Twitter, Facebook, Share2, ThumbsUp } from 'lucide-react';
 
 
 import './App.css';
@@ -82,6 +82,8 @@ const AppContent = () => {
   const [loading, setLoading] = useState(true);
   const { trackEvent } = useAnalytics();
   const [products, setProducts] = useState([]);
+  const [hasVoted, setHasVoted] = useState(false);
+  const [voteCount, setVoteCount] = useState(0);
 
   // Use the custom hook for real-time products fetching
   const { data: rawProducts, loading: productsLoading, error: productsError } = useRealtimeCollection('products');
@@ -124,6 +126,37 @@ const AppContent = () => {
     setProducts(productsWithImages);
   };
 
+  const handleVote = async (productId) => {
+    if (!user) {
+      alert('Please log in to vote.');
+      return;
+    }
+
+    const voteRef = doc(db, 'votes', `${user.uid}_${productId}`);
+    const voteDoc = await getDoc(voteRef);
+
+    if (voteDoc.exists()) {
+      alert('You have already voted for this product.');
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, 'products', productId), {
+        voteCount: increment(1)
+      });
+
+      await setDoc(voteRef, {
+        userId: user.uid,
+        productId: productId,
+        timestamp: new Date()
+      });
+
+      trackEvent('product_vote', 'Product', productId);
+    } catch (error) {
+      console.error('Error voting for product:', error);
+      alert('Failed to vote. Please try again.');
+    }
+  };
 
   const fetchUserCart = async (userId) => {
     const userCartRef = doc(db, 'carts', userId);
@@ -165,6 +198,8 @@ const AppContent = () => {
       localStorage.setItem('sessionCart', JSON.stringify(updatedCart));
     }
   };
+
+
 
   const handleLogin = async () => {
     try {
@@ -268,7 +303,7 @@ const AppContent = () => {
       </nav>
       <Routes>
         <Route path="/" element={<LandingPage products={products} />} />
-        <Route path="/product/:id" element={<ProductPage products={products} addToCart={addToCart} />} />
+        <Route path="/product/:id" element={<ProductPage products={products} addToCart={addToCart} handleVote={handleVote} />} />
         <Route path="/cart" element={<Cart cart={cart} removeFromCart={removeFromCart} />} />
         <Route path="/" element={<LandingPage products={products} />} />
 
@@ -334,15 +369,37 @@ const ProductGrid = React.forwardRef(({ products }, ref) => {
   );
 });
 
-const ProductPage = ({ products, addToCart }) => {
+// ProductPage component
+const ProductPage = ({ products, addToCart, handleVote, user }) => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const product = products.find(p => p.id === id);
+  const [product, setProduct] = useState(null);
+  const [hasVoted, setHasVoted] = useState(false);
+
+  useEffect(() => {
+    const currentProduct = products.find(p => p.id === id);
+    if (currentProduct) {
+      setProduct(currentProduct);
+    }
+  }, [products, id]);
+
+  useEffect(() => {
+    const checkUserVote = async () => {
+      if (user && product) {
+        const voteDoc = await getDoc(doc(db, 'votes', `${user.uid}_${product.id}`));
+        setHasVoted(voteDoc.exists());
+      }
+    };
+
+    checkUserVote();
+  }, [user, product]);
 
   if (!product) return <div>Product not found</div>;
 
   const shareUrl = `${window.location.origin}/product/${id}`;
   const shareText = `Check out this awesome product: ${product.name}`;
+
+
 
   const handleShare = async (platform) => {
     if (navigator.share && platform === 'native') {
@@ -377,8 +434,8 @@ const ProductPage = ({ products, addToCart }) => {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <button
-        onClick={() => navigate('/')}
+      <button 
+        onClick={() => navigate('/')} 
         className="mb-4 flex items-center text-blue-500 hover:text-blue-700"
       >
         <ArrowLeft className="mr-2" size={20} />
@@ -388,55 +445,77 @@ const ProductPage = ({ products, addToCart }) => {
         <div className="md:w-1/2">
           <img src={product.imageUrl} alt={product.name} className="w-full h-auto object-contain rounded-lg shadow-md" />
         </div>
-        <div className="md:w-1/2">
+        <div className="md:w-1/6">
           <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
           <p className="text-gray-600 mb-4">{product.description}</p>
           <p className="text-2xl font-bold text-green-600 mb-4">${product.price.toFixed(2)}</p>
+
           <button
             onClick={() => {
               addToCart(product);
               navigate('/cart');
             }}
-            className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition duration-300"
+            className="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition duration-300 mb-6"
           >
             Add to Cart
           </button>
-
-          <div className="flex space-x-4 mt-4">
+          
+          {/* Improved voting block */}
+          <div className="flex items-center space-x-4 mb-6 bg-gray-100 p-3 rounded-lg">
             <button
-              onClick={() => handleShare('twitter')}
-              className="text-blue-400 hover:text-blue-600"
-              aria-label="Share on Twitter"
+              onClick={() => handleVote(product.id)}
+              className={`flex items-center justify-center px-4 py-2 rounded-full ${
+                hasVoted ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-300 hover:bg-blue-500'
+              } text-white transition duration-300`}
+              disabled={hasVoted}
             >
-              <Twitter size={24} />
+              <ThumbsUp className="mr-2" size={18} />
+              {hasVoted ? 'Voted' : 'Vote'}
             </button>
-            <button
-              onClick={() => handleShare('facebook')}
-              className="text-blue-600 hover:text-blue-800"
-              aria-label="Share on Facebook"
-            >
-              <Facebook size={24} />
-            </button>
-            <button
-              onClick={() => handleShare('whatsapp')}
-              className="text-green-500 hover:text-green-700"
-              aria-label="Share on WhatsApp"
-            >
-              <Share2 size={24} />
-            </button>
-            {navigator.share && (
-              <button
-                onClick={() => handleShare('native')}
-                className="text-gray-600 hover:text-gray-800"
-                aria-label="Share"
-              >
-                <Share2 size={24} />
-              </button>
-            )}
+            <span className="text-lg font-semibold">{product.voteCount || 0} votes</span>
           </div>
+
+  
+          
+          {/* Improved sharing block */}
+          <div className="mt-6">
+            <p className="text-lg font-semibold mb-3">Share this product:</p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => handleShare('twitter')}
+                className="p-2 bg-blue-400 text-white rounded-full hover:bg-blue-500 transition duration-300"
+                aria-label="Share on Twitter"
+              >
+                <Twitter size={20} />
+              </button>
+              <button
+                onClick={() => handleShare('facebook')}
+                className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition duration-300"
+                aria-label="Share on Facebook"
+              >
+                <Facebook size={20} />
+              </button>
+              <button
+                onClick={() => handleShare('whatsapp')}
+                className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition duration-300"
+                aria-label="Share on WhatsApp"
+              >
+                <Share2 size={20} />
+              </button>
+              {navigator.share && (
+                <button
+                  onClick={() => handleShare('native')}
+                  className="p-2 bg-gray-500 text-white rounded-full hover:bg-gray-600 transition duration-300"
+                  aria-label="Share"
+                >
+                  <Share2 size={20} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-    </div >
   );
 };
 
