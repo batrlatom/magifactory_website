@@ -5,7 +5,7 @@ import { db, storage, auth } from './firebase';
 import { collection, getDocs, doc, setDoc, getDoc, updateDoc, addDoc, query, where, orderBy, onSnapshot, increment } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { ArrowLeft, Twitter, Facebook, Share2, ThumbsUp } from 'lucide-react';
+import { ArrowLeft, Twitter, Facebook, Share2, ThumbsUp, ShoppingCart } from 'lucide-react';
 
 
 import './App.css';
@@ -288,9 +288,10 @@ const AppContent = () => {
 
         </Link>
         <div className="flex items-center">
-          <Link to="/cart" className="text-blue-500 hover:text-blue-700 mr-4">
-            Cart ({cart.length})
-          </Link>
+        <Link to="/cart" className="flex items-center text-blue-500 hover:text-blue-700 mr-4">
+          <ShoppingCart size={24} />
+          {cart.length > 0 && <span className="ml-1">{cart.length}</span>}
+        </Link>
           {user ? (
             <div className="flex items-center">
               <span className="mr-2">Welcome, {user.displayName}!</span>
