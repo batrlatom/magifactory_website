@@ -294,7 +294,7 @@ const AppContent = () => {
           {user ? (
             <div className="flex items-center">
               <span className="mr-2">Welcome, {user.displayName}!</span>
-              <button onClick={handleLogout} className="bg-red-500 text-white px-4 py-2 rounded">Logout</button>
+              <button onClick={handleLogout} className="px-4 py-2 rounded">Logout</button>
             </div>
           ) : (
             <button onClick={handleLogin} className="bg-blue-500 text-white px-4 py-2 rounded">Login</button>
