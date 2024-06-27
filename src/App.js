@@ -8,9 +8,10 @@ import { collection, getDocs, doc, setDoc, getDoc, updateDoc, addDoc, query, whe
 import { ref, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { ArrowLeft, Twitter, Facebook, Share2, ThumbsUp, ShoppingCart } from 'lucide-react';
-
-
 import './App.css';
+
+const LastViewedProductContext = React.createContext();
+
 
 // Custom hook for Google Analytics tracking
 const useAnalytics = () => {
@@ -86,6 +87,9 @@ const AppContent = () => {
   const [products, setProducts] = useState([]);
   const [hasVoted, setHasVoted] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
+
+  const [lastViewedProductId, setLastViewedProductId] = useState(null);
+
 
   // Use the custom hook for real-time products fetching
   const { data: rawProducts, loading: productsLoading, error: productsError } = useRealtimeCollection('products');
@@ -283,44 +287,61 @@ const AppContent = () => {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <nav className="mb-4 flex justify-between items-center">
-        <Link to="/" className="text-blue-500 hover:text-blue-700 text-xl font-bold">
-          <img src="/logo.svg" alt="MagiFactory" className="h-8 w-auto" />
 
-        </Link>
-        <div className="flex items-center">
-        <Link to="/cart" className="flex items-center text-blue-500 hover:text-blue-700 mr-4">
-          <ShoppingCart size={24} />
-          {cart.length > 0 && <span className="ml-1">{cart.length}</span>}
-        </Link>
-          {user ? (
+      <LastViewedProductContext.Provider value={{ lastViewedProductId, setLastViewedProductId }}>
+
+        <div className="container mx-auto p-4">
+          <nav className="mb-4 flex justify-between items-center">
+            <Link to="/" className="text-blue-500 hover:text-blue-700 text-xl font-bold">
+              <img src="/logo.svg" alt="MagiFactory" className="h-8 w-auto" />
+
+            </Link>
             <div className="flex items-center">
-              <span className="mr-2">Welcome, {user.displayName}!</span>
-              <button onClick={handleLogout} className="px-4 py-2 rounded">Logout</button>
+              <Link to="/cart" className="flex items-center text-blue-500 hover:text-blue-700 mr-4">
+                <ShoppingCart size={24} />
+                {cart.length > 0 && <span className="ml-1">{cart.length}</span>}
+              </Link>
+              {user ? (
+                <div className="flex items-center">
+                  <span className="mr-2">Welcome, {user.displayName}!</span>
+                  <button onClick={handleLogout} className="px-4 py-2 rounded">Logout</button>
+                </div>
+              ) : (
+                <button onClick={handleLogin} className="bg-blue-500 text-white px-4 py-2 rounded">Login</button>
+              )}
             </div>
-          ) : (
-            <button onClick={handleLogin} className="bg-blue-500 text-white px-4 py-2 rounded">Login</button>
-          )}
+          </nav>
+          <Routes>
+            <Route path="/" element={<LandingPage products={products} />} />
+            <Route path="/product/:id" element={<ProductPage products={products} addToCart={addToCart} handleVote={handleVote} />} />
+            <Route path="/cart" element={<Cart cart={cart} removeFromCart={removeFromCart} />} />
+            <Route path="/" element={<LandingPage products={products} />} />
+
+            <Route path="/shipping" element={<Shipping saveShippingInfo={saveShippingInfo} fetchUserInfo={fetchUserInfo} trackEvent={trackEvent} />} />
+            <Route path="/payment" element={<Payment updateCart={updateCart} savePaymentInfo={savePaymentInfo} createOrder={createOrder} fetchUserInfo={fetchUserInfo} cart={cart} trackEvent={trackEvent} />} />
+            <Route path="/orders" element={<OrderHistory fetchUserOrders={fetchUserOrders} />} />
+
+          </Routes>
         </div>
-      </nav>
-      <Routes>
-        <Route path="/" element={<LandingPage products={products} />} />
-        <Route path="/product/:id" element={<ProductPage products={products} addToCart={addToCart} handleVote={handleVote} />} />
-        <Route path="/cart" element={<Cart cart={cart} removeFromCart={removeFromCart} />} />
-        <Route path="/" element={<LandingPage products={products} />} />
-
-        <Route path="/shipping" element={<Shipping saveShippingInfo={saveShippingInfo} fetchUserInfo={fetchUserInfo} trackEvent={trackEvent} />} />
-        <Route path="/payment" element={<Payment updateCart={updateCart} savePaymentInfo={savePaymentInfo} createOrder={createOrder} fetchUserInfo={fetchUserInfo} cart={cart} trackEvent={trackEvent} />} />
-        <Route path="/orders" element={<OrderHistory fetchUserOrders={fetchUserOrders} />} />
-
-      </Routes>
-    </div>
+      </LastViewedProductContext.Provider>
   );
 };
 
 const LandingPage = ({ products }) => {
   const productListRef = useRef(null);
+  const { lastViewedProductId } = React.useContext(LastViewedProductContext);
+  const productRefs = useRef({});
+
+  useEffect(() => {
+    if (lastViewedProductId && productRefs.current[lastViewedProductId]) {
+      setTimeout(() => {
+        productRefs.current[lastViewedProductId]?.scrollIntoView({
+          behavior: 'instant',
+          block: 'center',
+        });
+      }, 100); // Small delay to ensure render is complete
+    }
+  }, [lastViewedProductId, products]);
 
   const scrollToProducts = () => {
     productListRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -329,7 +350,7 @@ const LandingPage = ({ products }) => {
   return (
     <div>
       <HeroSection scrollToProducts={scrollToProducts} />
-      <ProductGrid products={products} ref={productListRef} />
+      <ProductGrid products={products} productListRef={productListRef} productRefs={productRefs} />
     </div>
   );
 };
@@ -356,14 +377,16 @@ const HeroSection = ({ scrollToProducts }) => {
   );
 };
 
-const ProductGrid = React.forwardRef(({ products }, ref) => {
+const ProductGrid = React.memo(({ products, productListRef, productRefs }) => {
+  const { lastViewedProductId } = React.useContext(LastViewedProductContext);
+
   return (
-    <div ref={ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div ref={productListRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {products.map((product) => (
-          <Link key={product.id} to={`/product/${product.id}`} className="block">
+          <Link key={product.id} to={`/product/${product.id}`} className="block" ref={(el) => (productRefs.current[product.id] = el)}>
             <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition duration-300">
-              <img src={product.imageUrl} alt={product.name} className="w-full h-64 object-cover" />
+              <img src={product.imageUrl} alt={product.name} className="w-full h-128 object-cover" />
             </div>
           </Link>
         ))}
@@ -378,14 +401,22 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [hasVoted, setHasVoted] = useState(false);
+  const { setLastViewedProductId } = React.useContext(LastViewedProductContext);
+
+
 
   useEffect(() => {
     const currentProduct = products.find(p => p.id === id);
     if (currentProduct) {
       setProduct(currentProduct);
-    }
-  }, [products, id]);
+      setLastViewedProductId(currentProduct.id);
 
+    }
+  }, [products, id, setLastViewedProductId]);
+
+  if (!product) return <div>Loading...</div>;
+
+/*
   useEffect(() => {
     const checkUserVote = async () => {
       if (user && product) {
@@ -396,6 +427,7 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
 
     checkUserVote();
   }, [user, product]);
+  */
 
   if (!product) return <div>Product not found</div>;
 
@@ -529,48 +561,7 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
 };
 
 
-const Cart = ({ cart, removeFromCart }) => {
-  const navigate = useNavigate();
-  const { trackEvent } = useAnalytics();
 
-  return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Cart</h1>
-      {cart.length === 0 ? (
-        <div>
-          <p>Your cart is empty.</p>
-          <Link to="/" className="bg-blue-500 text-white px-4 py-2 rounded mt-4 inline-block">
-            Continue Shopping
-          </Link>
-        </div>
-      ) : (
-        <>
-          {/* ... (existing cart item rendering) */}
-          <div className="mt-4">
-            <p className="font-bold text-xl mb-4">
-              Total: ${cart.reduce((total, item) => total + item.price, 0).toFixed(2)}
-            </p>
-            <div className="flex justify-between">
-              <Link to="/" className="flex items-center text-blue-500 hover:text-blue-700">
-                <ArrowLeft className="mr-2" size={20} />
-                Continue Shopping
-              </Link>
-              <Link
-                to="/shipping"
-                className="bg-blue-500 text-white px-4 py-2 rounded"
-                onClick={() => trackEvent('begin_checkout', 'Ecommerce', 'Begin Checkout', cart.reduce((total, item) => total + item.price, 0))}
-              >
-                Proceed to Checkout
-              </Link>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-};
-
-/*
 const Cart = ({ cart, removeFromCart }) => {
   const navigate = useNavigate();
   const { trackEvent } = useAnalytics();
@@ -585,8 +576,55 @@ const Cart = ({ cart, removeFromCart }) => {
     return null;
   }
 
-  
-};*/
+  return (
+    <div>
+      <div className="mt-4">
+
+        <div className="flex justify-between">
+          <Link to="/" className="flex items-center text-blue-500 hover:text-blue-700">
+            <ArrowLeft className="mr-2" size={20} />
+            Continue Shopping
+          </Link>
+
+        </div>
+      </div>
+
+      <h1 className="text-2xl font-bold mb-4">Cart</h1>
+
+
+      {cart.map((item, index) => (
+        <div key={index} className="flex items-center mb-4 border-b pb-2">
+          <img src={item.imageUrl} alt={item.name} className="w-16 h-16 object-cover mr-4" />
+          <div className="flex-grow">
+            <h3 className="font-bold">{item.name}</h3>
+            <p className="text-gray-600">${item.price.toFixed(2)}</p>
+          </div>
+          <button
+            onClick={() => removeFromCart(index)}
+            className="bg-red-500 text-white px-2 py-1 rounded"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+      <div className="mt-4">
+        <p className="font-bold text-xl mb-4">
+          Total: ${cart.reduce((total, item) => total + item.price, 0).toFixed(2)}
+        </p>
+        <div className="flex justify-between">
+
+          <Link
+            to="/shipping"
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+            onClick={() => trackEvent('begin_checkout', 'Ecommerce', 'Begin Checkout', cart.reduce((total, item) => total + item.price, 0))}
+          >
+            Proceed to Checkout
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 
 const europeanCountries = [
