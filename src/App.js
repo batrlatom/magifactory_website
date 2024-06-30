@@ -327,144 +327,7 @@ const AppContent = () => {
   );
 };
 
-const LandingPage = () => {
-  const [products, setProducts] = useState([]);
-  const [lastDoc, setLastDoc] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const observer = useRef();
-  const productListRef = useRef(null);
-  const { lastViewedProductId } = useContext(LastViewedProductContext);
-  const productRefs = useRef({});
 
-  const [error, setError] = useState(null);
-
-
-  const checkCollectionExists = async () => {
-    try {
-      const productsRef = collection(db, 'products');
-      const snapshot = await getCountFromServer(productsRef);
-      console.log('Number of documents in products collection:', snapshot.data().count);
-      return snapshot.data().count > 0;
-    } catch (error) {
-      console.error('Error checking collection:', error);
-      return false;
-    }
-  };
-
-  const loadMoreProducts = useCallback(async () => {
-    console.log('Loading more products...');
-    if (loading || !hasMore) return;
-    setLoading(true);
-    setError(null);
-
-    try {
-      const collectionExists = await checkCollectionExists();
-      if (!collectionExists) {
-        throw new Error('Products collection is empty or does not exist');
-      }
-
-      const productsRef = collection(db, 'products');
-      let q = query(productsRef, limit(10));
-
-      if (lastDoc) {
-        q = query(productsRef, orderBy('createdAt', 'desc'), startAfter(lastDoc), limit(10));
-      }
-
-      console.log('Executing query...');
-      const querySnapshot = await getDocs(q);
-      console.log('Query executed. Number of docs:', querySnapshot.docs.length);
-
-      if (querySnapshot.empty) {
-        console.log('Query returned no documents. Trying without ordering...');
-        q = query(productsRef, limit(10));
-        const retrySnapshot = await getDocs(q);
-        console.log('Retry query executed. Number of docs:', retrySnapshot.docs.length);
-        
-        if (retrySnapshot.empty) {
-          throw new Error('No products found in the collection');
-        }
-      }
-
-      const newProducts = await Promise.all(
-        querySnapshot.docs.map(async (doc) => {
-          const data = doc.data();
-          console.log('Product data:', data);
-
-          let imageUrl = '/placeholder-image.jpg';
-          if (data.imagePath && typeof data.imagePath === 'string' && data.imagePath.trim() !== '') {
-            try {
-              const imageRef = ref(storage, data.imagePath.trim());
-              imageUrl = await getDownloadURL(imageRef);
-              console.log('Image URL fetched:', imageUrl);
-            } catch (error) {
-              console.error(`Error fetching image URL for product ${doc.id}:`, error);
-            }
-          }
-          return { id: doc.id, ...data, imageUrl };
-        })
-      );
-      
-      console.log('New products processed:', newProducts.length);
-
-      if (newProducts.length > 0) {
-        setProducts(prevProducts => [...prevProducts, ...newProducts]);
-        setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
-      } else {
-        setHasMore(false);
-      }
-    } catch (error) {
-      console.error('Error loading more products:', error);
-      setError(error.message);
-    }
-    setLoading(false);
-  }, [lastDoc, loading, hasMore]);
-
-  useEffect(() => {
-    console.log('Initial load effect triggered');
-    loadMoreProducts();
-  }, [loadMoreProducts]);
-  
-
-  useEffect(() => {
-    if (lastViewedProductId && productRefs.current[lastViewedProductId]) {
-      setTimeout(() => {
-        productRefs.current[lastViewedProductId]?.scrollIntoView({
-          behavior: 'instant',
-          block: 'center',
-        });
-      }, 100);
-    }
-  }, [lastViewedProductId, products]);
-
-  const lastProductRef = useCallback(node => {
-    if (observer.current) observer.current.disconnect();
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
-        loadMoreProducts();
-      }
-    });
-    if (node) observer.current.observe(node);
-  }, [loadMoreProducts, hasMore]);
-
-  const scrollToProducts = () => {
-    productListRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  return (
-    <div>
-      <HeroSection scrollToProducts={scrollToProducts} />
-      <ProductGrid 
-        products={products} 
-        productListRef={productListRef} 
-        productRefs={productRefs}
-        lastProductRef={lastProductRef}
-      />
-      {loading && <div className="text-center py-4">Loading more products...</div>}
-      {!hasMore && <div className="text-center py-4">No more products to load</div>}
-    </div>
-  );
-};
 
 const HeroSection = ({ scrollToProducts }) => {
   return (
@@ -488,14 +351,141 @@ const HeroSection = ({ scrollToProducts }) => {
   );
 };
 
-const ProductGrid = React.memo(({ products, productListRef, productRefs }) => {
-  const { lastViewedProductId } = React.useContext(LastViewedProductContext);
+const LandingPage = () => {
+  const [products, setProducts] = useState([]);
+  const [lastDoc, setLastDoc] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [error, setError] = useState(null);
+  const observer = useRef();
+  const productListRef = useRef(null);
+  const { lastViewedProductId } = useContext(LastViewedProductContext);
+  const productRefs = useRef({});
+  const loadedIds = useRef(new Set());
+  const isInitialMount = useRef(true);
 
+  const loadMoreProducts = useCallback(async () => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const productsRef = collection(db, 'products');
+      const q = lastDoc
+        ? query(productsRef, orderBy('timestamp', 'desc'), startAfter(lastDoc), limit(10))
+        : query(productsRef, orderBy('timestamp', 'desc'), limit(10));
+
+      const querySnapshot = await getDocs(q);
+
+      const newProducts = await Promise.all(
+        querySnapshot.docs.map(async (doc) => {
+          if (loadedIds.current.has(doc.id)) return null;
+
+          const data = doc.data();
+          let imageUrl = '/placeholder-image.jpg';
+          if (data.imagePath && typeof data.imagePath === 'string' && data.imagePath.trim() !== '') {
+            try {
+              const imageRef = ref(storage, data.imagePath.trim());
+              imageUrl = await getDownloadURL(imageRef);
+            } catch (error) {
+              console.error(`Error fetching image URL for product ${doc.id}:`, error);
+            }
+          }
+          loadedIds.current.add(doc.id);
+          return { id: doc.id, ...data, imageUrl };
+        })
+      );
+      
+      const filteredNewProducts = newProducts.filter(Boolean);
+
+      if (filteredNewProducts.length > 0) {
+        setProducts(prevProducts => {
+          const updatedProducts = [...prevProducts];
+          filteredNewProducts.forEach(product => {
+            if (!updatedProducts.some(p => p.id === product.id)) {
+              updatedProducts.push(product);
+            }
+          });
+          return updatedProducts;
+        });
+        setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error loading more products:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [lastDoc, loading, hasMore]);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      loadMoreProducts();
+    }
+  }, [loadMoreProducts]);
+
+  useEffect(() => {
+    if (lastViewedProductId && productRefs.current[lastViewedProductId]) {
+      setTimeout(() => {
+        productRefs.current[lastViewedProductId]?.scrollIntoView({
+          behavior: 'instant',
+          block: 'center',
+        });
+      }, 100);
+    }
+  }, [lastViewedProductId, products]);
+
+  const lastProductRef = useCallback(node => {
+    if (loading) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        loadMoreProducts();
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [loadMoreProducts, hasMore, loading]);
+
+  const scrollToProducts = () => {
+    productListRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  return (
+    <div>
+      <HeroSection scrollToProducts={scrollToProducts} />
+      {error && <div className="text-center py-4 text-red-500">{error}</div>}
+      <ProductGrid 
+        products={products} 
+        productListRef={productListRef} 
+        productRefs={productRefs}
+        lastProductRef={lastProductRef}
+      />
+      {loading && <div className="text-center py-4">Loading more products...</div>}
+      {!loading && !hasMore && products.length > 0 && <div className="text-center py-4">No more products to load</div>}
+      {!loading && !hasMore && products.length === 0 && <div className="text-center py-4">No products available</div>}
+    </div>
+  );
+};
+
+const ProductGrid = React.memo(({ products, productListRef, productRefs, lastProductRef }) => {
   return (
     <div ref={productListRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {products.map((product) => (
-          <Link key={product.id} to={`/product/${product.id}`} className="block" ref={(el) => (productRefs.current[product.id] = el)}>
+        {products.map((product, index) => (
+          <Link 
+            key={product.id} 
+            to={`/product/${product.id}`} 
+            className="block" 
+            ref={el => {
+              productRefs.current[product.id] = el;
+              if (index === products.length - 1) {
+                lastProductRef(el);
+              }
+            }}
+          >
             <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition duration-300">
               <img src={product.imageUrl} alt={product.name} className="w-full h-128 object-cover" />
             </div>
