@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 
 
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import { db, storage, auth } from './firebase';
-import { collection, getDocs, doc, setDoc, getDoc, updateDoc, addDoc, query, where, orderBy, onSnapshot, increment } from 'firebase/firestore';
+import { getCountFromServer, collection, getDocs, doc, setDoc, getDoc, updateDoc, addDoc, query, where, orderBy, onSnapshot, increment, startAfter, limit  } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { ArrowLeft, Twitter, Facebook, Share2, ThumbsUp, ShoppingCart } from 'lucide-react';
@@ -327,10 +327,104 @@ const AppContent = () => {
   );
 };
 
-const LandingPage = ({ products }) => {
+const LandingPage = () => {
+  const [products, setProducts] = useState([]);
+  const [lastDoc, setLastDoc] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const observer = useRef();
   const productListRef = useRef(null);
-  const { lastViewedProductId } = React.useContext(LastViewedProductContext);
+  const { lastViewedProductId } = useContext(LastViewedProductContext);
   const productRefs = useRef({});
+
+  const [error, setError] = useState(null);
+
+
+  const checkCollectionExists = async () => {
+    try {
+      const productsRef = collection(db, 'products');
+      const snapshot = await getCountFromServer(productsRef);
+      console.log('Number of documents in products collection:', snapshot.data().count);
+      return snapshot.data().count > 0;
+    } catch (error) {
+      console.error('Error checking collection:', error);
+      return false;
+    }
+  };
+
+  const loadMoreProducts = useCallback(async () => {
+    console.log('Loading more products...');
+    if (loading || !hasMore) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const collectionExists = await checkCollectionExists();
+      if (!collectionExists) {
+        throw new Error('Products collection is empty or does not exist');
+      }
+
+      const productsRef = collection(db, 'products');
+      let q = query(productsRef, limit(10));
+
+      if (lastDoc) {
+        q = query(productsRef, orderBy('createdAt', 'desc'), startAfter(lastDoc), limit(10));
+      }
+
+      console.log('Executing query...');
+      const querySnapshot = await getDocs(q);
+      console.log('Query executed. Number of docs:', querySnapshot.docs.length);
+
+      if (querySnapshot.empty) {
+        console.log('Query returned no documents. Trying without ordering...');
+        q = query(productsRef, limit(10));
+        const retrySnapshot = await getDocs(q);
+        console.log('Retry query executed. Number of docs:', retrySnapshot.docs.length);
+        
+        if (retrySnapshot.empty) {
+          throw new Error('No products found in the collection');
+        }
+      }
+
+      const newProducts = await Promise.all(
+        querySnapshot.docs.map(async (doc) => {
+          const data = doc.data();
+          console.log('Product data:', data);
+
+          let imageUrl = '/placeholder-image.jpg';
+          if (data.imagePath && typeof data.imagePath === 'string' && data.imagePath.trim() !== '') {
+            try {
+              const imageRef = ref(storage, data.imagePath.trim());
+              imageUrl = await getDownloadURL(imageRef);
+              console.log('Image URL fetched:', imageUrl);
+            } catch (error) {
+              console.error(`Error fetching image URL for product ${doc.id}:`, error);
+            }
+          }
+          return { id: doc.id, ...data, imageUrl };
+        })
+      );
+      
+      console.log('New products processed:', newProducts.length);
+
+      if (newProducts.length > 0) {
+        setProducts(prevProducts => [...prevProducts, ...newProducts]);
+        setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error loading more products:', error);
+      setError(error.message);
+    }
+    setLoading(false);
+  }, [lastDoc, loading, hasMore]);
+
+  useEffect(() => {
+    console.log('Initial load effect triggered');
+    loadMoreProducts();
+  }, [loadMoreProducts]);
+  
 
   useEffect(() => {
     if (lastViewedProductId && productRefs.current[lastViewedProductId]) {
@@ -339,9 +433,19 @@ const LandingPage = ({ products }) => {
           behavior: 'instant',
           block: 'center',
         });
-      }, 100); // Small delay to ensure render is complete
+      }, 100);
     }
   }, [lastViewedProductId, products]);
+
+  const lastProductRef = useCallback(node => {
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        loadMoreProducts();
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [loadMoreProducts, hasMore]);
 
   const scrollToProducts = () => {
     productListRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -350,7 +454,14 @@ const LandingPage = ({ products }) => {
   return (
     <div>
       <HeroSection scrollToProducts={scrollToProducts} />
-      <ProductGrid products={products} productListRef={productListRef} productRefs={productRefs} />
+      <ProductGrid 
+        products={products} 
+        productListRef={productListRef} 
+        productRefs={productRefs}
+        lastProductRef={lastProductRef}
+      />
+      {loading && <div className="text-center py-4">Loading more products...</div>}
+      {!hasMore && <div className="text-center py-4">No more products to load</div>}
     </div>
   );
 };
