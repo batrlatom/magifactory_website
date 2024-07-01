@@ -8,6 +8,8 @@ import { getCountFromServer, collection, getDocs, doc, setDoc, getDoc, updateDoc
 import { ref, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { ArrowLeft, Twitter, Facebook, Share2, ThumbsUp, ShoppingCart } from 'lucide-react';
+import { CheckCircle, Package, Truck } from 'lucide-react';
+
 import './App.css';
 
 const LastViewedProductContext = React.createContext();
@@ -78,6 +80,8 @@ const App = () => {
   );
 };
 
+
+
 // AppContent component (wrapped by Router)
 const AppContent = () => {
   const [cart, setCart] = useState([]);
@@ -131,6 +135,17 @@ const AppContent = () => {
     }));
     setProducts(productsWithImages);
   };
+
+  const clearCart = () => {
+    setCart([]);
+    if (user) {
+      const userCartRef = doc(db, 'carts', user.uid);
+      updateDoc(userCartRef, { items: [] });
+    } else {
+      localStorage.removeItem('sessionCart');
+    }
+  };
+  
 
   const handleVote = async (productId) => {
     if (!user) {
@@ -318,8 +333,9 @@ const AppContent = () => {
             <Route path="/" element={<LandingPage products={products} />} />
 
             <Route path="/shipping" element={<Shipping saveShippingInfo={saveShippingInfo} fetchUserInfo={fetchUserInfo} trackEvent={trackEvent} />} />
-            <Route path="/payment" element={<Payment updateCart={updateCart} savePaymentInfo={savePaymentInfo} createOrder={createOrder} fetchUserInfo={fetchUserInfo} cart={cart} trackEvent={trackEvent} />} />
+            <Route path="/payment" element={<Payment updateCart={updateCart} savePaymentInfo={savePaymentInfo} createOrder={createOrder} fetchUserInfo={fetchUserInfo} cart={cart} trackEvent={trackEvent} clearCart={clearCart}/> } />
             <Route path="/orders" element={<OrderHistory fetchUserOrders={fetchUserOrders} />} />
+            <Route path="/order-confirmation" element={<OrderConfirmation />} />
 
           </Routes>
         </div>
@@ -464,7 +480,7 @@ const LandingPage = () => {
         lastProductRef={lastProductRef}
       />
       {loading && <div className="text-center py-4">Loading more products...</div>}
-      {!loading && !hasMore && products.length > 0 && <div className="text-center py-4">No more products to load</div>}
+      {!loading && !hasMore && products.length > 0 && <div className="text-center py-4"></div>}
       {!loading && !hasMore && products.length === 0 && <div className="text-center py-4">No products available</div>}
     </div>
   );
@@ -906,7 +922,7 @@ const Shipping = ({ saveShippingInfo, fetchUserInfo, trackEvent }) => {
   );
 };
 
-const Payment = ({ savePaymentInfo, createOrder, fetchUserInfo, cart, trackEvent }) => {
+const Payment = ({ savePaymentInfo, createOrder, fetchUserInfo, cart, trackEvent, clearCart }) => {
   const navigate = useNavigate();
   const [paymentInfo, setPaymentInfo] = useState({
     cardholderName: '',
@@ -960,7 +976,8 @@ const Payment = ({ savePaymentInfo, createOrder, fetchUserInfo, cart, trackEvent
       };
       const orderId = await createOrder(orderDetails);
       trackEvent('purchase', 'Ecommerce', 'Purchase Complete', orderDetails.total);
-      alert(`Order placed successfully! Order ID: ${orderId}`);
+      //alert(`Order placed successfully! Order ID: ${orderId}`);
+      clearCart();
       navigate('/order-confirmation', { state: { orderId } });
     } catch (error) {
       console.error('Error processing payment:', error);
@@ -1143,6 +1160,99 @@ const OrderHistory = ({ fetchUserOrders }) => {
           </div>
         ))
       )}
+    </div>
+  );
+};
+
+const OrderConfirmation = () => {
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const orderId = location.state?.orderId;
+
+  useEffect(() => {
+    const fetchOrder = async () => {
+      if (!orderId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const orderDoc = await getDoc(doc(db, 'orders', orderId));
+        if (orderDoc.exists()) {
+          setOrder({ id: orderDoc.id, ...orderDoc.data() });
+        }
+      } catch (error) {
+        console.error('Error fetching order:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrder();
+  }, [orderId]);
+
+  if (loading) {
+    return <div className="text-center py-8">Loading order details...</div>;
+  }
+
+  if (!order) {
+    return (
+      <div className="max-w-2xl mx-auto py-8 px-4">
+        <h1 className="text-3xl font-bold mb-4">Order Not Found</h1>
+        <p>We couldn't find the order you're looking for. Please check your order ID and try again.</p>
+        <Link to="/" className="text-blue-500 hover:underline mt-4 inline-block">Return to Home</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto py-8 px-4">
+      <div className="text-center mb-8">
+        <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+        <h1 className="text-3xl font-bold mb-2">Order Confirmed!</h1>
+        <p className="text-xl text-gray-600">Thank you for your purchase.</p>
+      </div>
+
+      <div className="bg-gray-100 rounded-lg p-6 mb-8">
+        <h2 className="text-2xl font-semibold mb-4">Order Details</h2>
+        <p><strong>Order ID:</strong> {order.id}</p>
+        <p><strong>Date:</strong> {new Date(order.createdAt.seconds * 1000).toLocaleString()}</p>
+        <p><strong>Status:</strong> {order.status}</p>
+        <p><strong>Total:</strong> ${order.total.toFixed(2)}</p>
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold mb-4">Order Summary</h2>
+        {order.items.map((item, index) => (
+          <div key={index} className="flex justify-between items-center border-b py-2">
+            <span>{item.name}</span>
+            <span>${item.price.toFixed(2)}</span>
+          </div>
+        ))}
+        <div className="flex justify-between items-center font-bold mt-4">
+          <span>Total</span>
+          <span>${order.total.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div className="bg-blue-50 rounded-lg p-6 mb-8">
+        <h2 className="text-2xl font-semibold mb-4">What's Next?</h2>
+        <div className="flex items-center mb-4">
+          <Package className="w-6 h-6 mr-2 text-blue-500" />
+          <span>We're preparing your order for shipment.</span>
+        </div>
+        <div className="flex items-center">
+          <Truck className="w-6 h-6 mr-2 text-blue-500" />
+          <span>You'll receive a shipping confirmation email once your order is on its way.</span>
+        </div>
+      </div>
+
+      <div className="text-center">
+        <Link to="/" className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition duration-300">
+          Continue Shopping
+        </Link>
+      </div>
     </div>
   );
 };
