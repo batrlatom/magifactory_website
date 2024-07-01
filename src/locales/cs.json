@@ -1,29 +1,110 @@
 {
-    "welcome": "Vitaj, {{name}}!",
-    "login": "Logni sa",
-    "logout": "Vypni",
-    "cart": "Kybl",
-    "continueShopping": "Continue Shopping",
-    "remove": "Remove",
-    "total": "Total",
-    "proceedToCheckout": "Proceed to Checkout",
-    "hero": {
-      "title": "Oživte AI navržená trička s MagiFactory",
-      "description": "Náš AI bot vytváří každou minutu unikátní design trička. Spojte se s přáteli, hlasujte o svých oblíbených a proměňte virtuální návrhy v skutečné, nositelné umění. Připojte se dnes k AI módní revoluci!",
-      "cta": "ZAČÍT"
-    },
-    "product": {
-      "backToProducts": "Zpět na produkty",
-      "price": "{{amount}} {{symbol}}",
-      "addToCart": "Přidat do košíku",
-      "vote": "Hlasovat",
-      "voteCount": "{{count}} hlas",
-      "voteCount_plural": "{{count}} hlasů",
-      "shareProduct": "Sdílet tento produkt:",
-      "shareText": "Mrkni na tuhle zajimavou stranku: {{productName}}"
-
-    },
-    "currency": {
-      "symbol": "Kč"
-    }
+  "welcome": "Vitaj, {{name}}!",
+  "login": "Logni sa",
+  "logout": "Vypni",
+  "continueShopping": "Continue Shopping",
+  "remove": "Remove",
+  "total": "Total",
+  "proceedToCheckout": "Proceed to Checkout",
+  "navbar": {
+    "yourOrders": "Vaše objednávky",
+    "welcome": "Vítejte, {{name}}!",
+    "login": "Přihlásit",
+    "logout": "Odhlásit"
+  },
+  "hero": {
+    "title": "Oživte AI navržená trička s MagiFactory",
+    "description": "Náš AI bot vytváří každou minutu unikátní design trička. Spojte se s přáteli, hlasujte o svých oblíbených a proměňte virtuální návrhy v skutečné, nositelné umění. Připojte se dnes k AI módní revoluci!",
+    "cta": "ZAČÍT"
+  },
+  "product": {
+    "backToProducts": "Zpět na produkty",
+    "price": "{{amount}} {{symbol}}",
+    "addToCart": "Přidat do košíku",
+    "vote": "Hlasovat",
+    "voteCount": "{{count}} hlas",
+    "voteCount_plural": "{{count}} hlasů",
+    "shareProduct": "Sdílet tento produkt:",
+    "shareText": "Mrkni na tuhle zajimavou stranku: {{productName}}"
+  },
+  "currency": {
+    "symbol": "Kč"
+  },
+  "cart": {
+    "title": "Košík",
+    "continueShopping": "Pokračovat v nákupu",
+    "remove": "Odstranit",
+    "total": "Celkem",
+    "proceedToCheckout": "Pokračovat k pokladně",
+    "empty": "Váš košík je prázdný"
+  },
+  "shipping": {
+    "title": "Doručovací údaje",
+    "backToCart": "Zpět do košíku",
+    "firstName": "Jméno",
+    "lastName": "Příjmení",
+    "address": "Adresa",
+    "city": "Město",
+    "country": "Země",
+    "postalCode": "PSČ",
+    "phoneNumber": "Telefonní číslo",
+    "shippingMethod": "Způsob doručení",
+    "selectCountry": "Vyberte zemi",
+    "dpdStandard": "DPD (3-5 pracovních dnů)",
+    "dhlStandard": "DHL (3-5 pracovních dnů)",
+    "proceedToPayment": "Pokračovat k platbě"
+  },
+  "paymentPage": {
+    "title": "Platební údaje",
+    "backToShipping": "Zpět na doručení",
+    "cardholderName": "Jméno držitele karty",
+    "cardNumber": "Číslo karty",
+    "expiryDate": "Datum platnosti",
+    "cvv": "CVV",
+    "billingAddress": "Fakturační adresa",
+    "street": "Ulice a číslo popisné",
+    "city": "Město",
+    "country": "Země",
+    "postalCode": "PSČ",
+    "orderSummary": "Shrnutí objednávky",
+    "total": "Celkem",
+    "completePurchase": "Dokončit nákup",
+    "loading": "Zpracování platby...",
+    "errorProcessing": "Chyba při zpracování platby. Prosím zkuste to znovu.",
+    "cardNumberPlaceholder": "1234 5678 9012 3456",
+    "expiryDatePlaceholder": "MM/RR",
+    "cvvPlaceholder": "123"
+  },
+  "orderConfirmation": {
+    "title": "Objednávka potvrzena!",
+    "thankYou": "Děkujeme za váš nákup.",
+    "orderDetails": "Detaily objednávky",
+    "orderId": "Číslo objednávky",
+    "date": "Datum",
+    "status": "Stav",
+    "total": "Celkem",
+    "orderSummary": "Shrnutí objednávky",
+    "whatsNext": "Co bude dál?",
+    "preparingOrder": "Připravujeme vaši objednávku k odeslání.",
+    "shippingConfirmation": "Jakmile bude vaše objednávka na cestě, obdržíte e-mail s potvrzením o odeslání.",
+    "continueShopping": "Pokračovat v nákupu",
+    "orderNotFound": "Objednávka nenalezena",
+    "orderNotFoundMessage": "Nemůžeme najít objednávku, kterou hledáte. Prosím zkontrolujte číslo objednávky a zkuste to znovu.",
+    "returnHome": "Návrat na úvodní stránku",
+    "loading": "Načítání detailů objednávky..."
+  },
+  "orderHistory": {
+    "title": "Historie objednávek",
+    "noOrders": "Zatím jste neprovedli žádné objednávky.",
+    "orderId": "Číslo objednávky",
+    "date": "Datum",
+    "status": "Stav",
+    "total": "Celkem",
+    "items": "Položky",
+    "viewDetails": "Zobrazit detaily",
+    "loading": "Načítání objednávek..."
+  },
+  "orderStatus": {
+    "pending": "Čeká na zpracování"
   }
+}

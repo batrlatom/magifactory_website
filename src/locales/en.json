@@ -2,11 +2,16 @@
     "welcome": "Welcome, {{name}}!",
     "login": "Login",
     "logout": "Logout",
-    "cart": "Cart",
     "continueShopping": "Continue Shopping",
     "remove": "Remove",
     "total": "Total",
     "proceedToCheckout": "Proceed to Checkout",
+    "navbar": {
+        "yourOrders": "Your Orders",
+        "welcome": "Welcome, {{name}}!",
+        "login": "Login",
+        "logout": "Logout"
+    },
     "hero": {
         "title": "Bring AI-designed t-shirts to life with MagiFactory",
         "description": "Our AI bot creates a unique t-shirt design every minute. Team up with friends to vote on your favorites and turn virtual designs into real, wearable art. Join the AI fashion revolution today!",
@@ -21,9 +26,85 @@
         "voteCount_plural": "{{count}} votes",
         "shareProduct": "Share this product:",
         "shareText": "Check out this awesome product: {{productName}}"
-
     },
     "currency": {
         "symbol": "$"
-    }
+    },
+    "cart": {
+        "title": "Cart",
+        "continueShopping": "Continue Shopping",
+        "remove": "Remove",
+        "total": "Total",
+        "proceedToCheckout": "Proceed to Checkout",
+        "empty": "Your cart is empty"
+    },
+    "shipping": {
+        "title": "Shipping Information",
+        "backToCart": "Back to Cart",
+        "firstName": "First Name",
+        "lastName": "Last Name",
+        "address": "Address",
+        "city": "City",
+        "country": "Country",
+        "postalCode": "Postal Code",
+        "phoneNumber": "Phone Number",
+        "shippingMethod": "Shipping Method",
+        "selectCountry": "Select a country",
+        "dpdStandard": "DPD (3-5 business days)",
+        "dhlStandard": "DHL (3-5 business days)",
+        "proceedToPayment": "Proceed to Payment"
+    },
+    "paymentPage": {
+        "title": "Payment Information",
+        "backToShipping": "Back to Shipping",
+        "cardholderName": "Cardholder Name",
+        "cardNumber": "Card Number",
+        "expiryDate": "Expiry Date",
+        "cvv": "CVV",
+        "billingAddress": "Billing Address",
+        "street": "Street Address",
+        "city": "City",
+        "country": "Country",
+        "postalCode": "Postal Code",
+        "orderSummary": "Order Summary",
+        "total": "Total",
+        "completePurchase": "Complete Purchase",
+        "loading": "Processing payment...",
+        "errorProcessing": "Error processing payment. Please try again.",
+        "cardNumberPlaceholder": "1234 5678 9012 3456",
+        "expiryDatePlaceholder": "MM/YY",
+        "cvvPlaceholder": "123"
+    },
+    "orderConfirmation": {
+        "title": "Order Confirmed!",
+        "thankYou": "Thank you for your purchase.",
+        "orderDetails": "Order Details",
+        "orderId": "Order ID",
+        "date": "Date",
+        "status": "Status",
+        "total": "Total",
+        "orderSummary": "Order Summary",
+        "whatsNext": "What's Next?",
+        "preparingOrder": "We're preparing your order for shipment.",
+        "shippingConfirmation": "You'll receive a shipping confirmation email once your order is on its way.",
+        "continueShopping": "Continue Shopping",
+        "orderNotFound": "Order Not Found",
+        "orderNotFoundMessage": "We couldn't find the order you're looking for. Please check your order ID and try again.",
+        "returnHome": "Return to Home",
+        "loading": "Loading order details..."
+    },
+    "orderHistory": {
+        "title": "Order History",
+        "noOrders": "You haven't placed any orders yet.",
+        "orderId": "Order ID",
+        "date": "Date",
+        "status": "Status",
+        "total": "Total",
+        "items": "Items",
+        "viewDetails": "View Details",
+        "loading": "Loading orders..."
+      },
+      "orderStatus": {
+        "pending": "Pending"
+      }
 }

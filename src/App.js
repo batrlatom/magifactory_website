@@ -118,7 +118,7 @@ const AppContent = () => {
     i18n.changeLanguage('cs');
   };
 
-  
+
 
   // Use the custom hook for real-time products fetching
   const { data: rawProducts, loading: productsLoading, error: productsError } = useRealtimeCollection('products');
@@ -343,11 +343,15 @@ const AppContent = () => {
             </Link>
             {user ? (
               <div className="flex items-center">
-                <span className="mr-2">Welcome, {user.displayName}!</span>
-                <button onClick={handleLogout} className="px-4 py-2 rounded">{t('logout')}</button>
+                <span className="mr-2">{t('navbar.welcome', { name: user.displayName })}</span>
+
+                <Link to="/orders" className="flex items-center text-blue-500 hover:text-blue-700 mr-4">
+                  <span>{t('navbar.yourOrders')}</span></Link>
+
+                <button onClick={handleLogout} className="px-4 py-2 rounded">{t('navbar.logout')}</button>
               </div>
             ) : (
-              <button onClick={handleLogin} className="bg-blue-500 text-white px-4 py-2 rounded">{t('login')}</button>
+              <button onClick={handleLogin} className="bg-blue-500 text-white px-4 py-2 rounded">{t('navbar.login')}</button>
 
             )}
           </div>
@@ -634,7 +638,7 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
 
             <p className="text-gray-600 mb-4">{product.description}</p>
             <p className="text-2xl font-bold text-green-600 mb-4">            {t('product.price', { symbol: t('currency.symbol'), amount: product.price.toFixed(2) })}
-</p>
+            </p>
 
             <button
               onClick={() => {
@@ -643,7 +647,7 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
               }}
               className="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition duration-300 mb-6"
             >
-               {t('product.addToCart')}
+              {t('product.addToCart')}
             </button>
 
             {/* Improved voting block */}
@@ -658,7 +662,7 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
                 {hasVoted ? 'Voted' : t('product.vote')}
               </button>
               <span className="text-lg font-semibold">              {t('product.voteCount', { count: product.voteCount || 0 })}
-</span>
+              </span>
             </div>
 
 
@@ -709,21 +713,73 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
   );
 };
 
+const Cart = ({ cart, removeFromCart }) => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
 
+  const total = cart.reduce((total, item) => total + item.price, 0);
 
+  return (
+    <div className="max-w-2xl mx-auto py-8">
+      <h1 className="text-3xl font-bold mb-6">{t('cart.title')}</h1>
+
+      <Link to="/" className="flex items-center text-blue-500 hover:text-blue-700 mb-6">
+        <ArrowLeft className="mr-2" size={20} />
+        {t('cart.continueShopping')}
+      </Link>
+
+      {cart.length === 0 ? (
+        <p className="text-center text-gray-500">{t('cart.empty')}</p>
+      ) : (
+        <>
+          <div className="space-y-4">
+            {cart.map((item, index) => (
+              <div key={index} className={`flex items-center pb-4 ${index !== cart.length - 1 ? 'border-b' : ''}`}>
+                <img src={item.imageUrl} alt={item.name} className="w-20 h-20 object-cover mr-4" />
+                <div className="flex-grow">
+                  <h3 className="font-bold">{item.name}</h3>
+                  <p className="text-gray-600">
+                    {t('product.price', {
+                      symbol: t('currency.symbol'),
+                      amount: item.price.toFixed(2)
+                    })}
+                  </p>
+                </div>
+                <button
+                  onClick={() => removeFromCart(index)}
+                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition duration-300"
+                >
+                  {t('cart.remove')}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 pt-4 border-t">
+            <p className="font-bold text-xl mb-4">
+              {t('cart.total')}: {t('product.price', {
+                symbol: t('currency.symbol'),
+                amount: total.toFixed(2)
+              })}
+            </p>
+            <button
+              onClick={() => navigate('/shipping')}
+              className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300"
+            >
+              {t('cart.proceedToCheckout')}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+/*
 const Cart = ({ cart, removeFromCart }) => {
   const navigate = useNavigate();
   const { trackEvent } = useAnalytics();
 
-  /*useEffect(() => {
-    if (cart.length === 0) {
-      navigate('/');
-    }
-  }, [cart, navigate]);
-
-  if (cart.length === 0) {
-    return null;
-  }*/
 
   return (
     <div>
@@ -774,7 +830,7 @@ const Cart = ({ cart, removeFromCart }) => {
     </div>
   );
 };
-
+*/
 
 const europeanCountries = [
   "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czech Republic",
@@ -786,7 +842,11 @@ const europeanCountries = [
 
 const allCountries = [...europeanCountries, "United States"].sort();
 
-const Shipping = ({ saveShippingInfo, fetchUserInfo, trackEvent }) => {
+
+
+
+const Shipping = ({ saveShippingInfo, fetchUserInfo }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [shippingInfo, setShippingInfo] = useState({
     firstName: '',
@@ -820,7 +880,6 @@ const Shipping = ({ saveShippingInfo, fetchUserInfo, trackEvent }) => {
     e.preventDefault();
     try {
       await saveShippingInfo(shippingInfo);
-      trackEvent('add_shipping_info', 'Ecommerce', 'Add Shipping Info');
       navigate('/payment');
     } catch (error) {
       console.error('Error saving shipping info:', error);
@@ -828,126 +887,130 @@ const Shipping = ({ saveShippingInfo, fetchUserInfo, trackEvent }) => {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div className="text-center py-8">Loading...</div>;
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Shipping Information</h1>
-      <form className="space-y-4" onSubmit={handleSubmit}>
+    <div className="max-w-2xl mx-auto py-8">
+      <h1 className="text-3xl font-bold mb-6">{t('shipping.title')}</h1>
+
+      <button onClick={() => navigate('/cart')} className="flex items-center text-blue-500 hover:text-blue-700 mb-6">
+        <ArrowLeft className="mr-2" size={20} />
+        {t('shipping.backToCart')}
+      </button>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="firstName" className="block mb-1 font-medium">First Name</label>
+            <label htmlFor="firstName" className="block mb-1 font-medium">{t('shipping.firstName')}</label>
             <input
               type="text"
               id="firstName"
               name="firstName"
-              className="w-full border rounded px-3 py-2"
-              required
               value={shippingInfo.firstName}
               onChange={handleChange}
+              className="w-full border rounded px-3 py-2"
+              required
             />
           </div>
           <div>
-            <label htmlFor="lastName" className="block mb-1 font-medium">Last Name</label>
+            <label htmlFor="lastName" className="block mb-1 font-medium">{t('shipping.lastName')}</label>
             <input
               type="text"
               id="lastName"
               name="lastName"
-              className="w-full border rounded px-3 py-2"
-              required
               value={shippingInfo.lastName}
               onChange={handleChange}
+              className="w-full border rounded px-3 py-2"
+              required
             />
           </div>
         </div>
         <div>
-          <label htmlFor="address" className="block mb-1 font-medium">Address</label>
+          <label htmlFor="address" className="block mb-1 font-medium">{t('shipping.address')}</label>
           <input
             type="text"
             id="address"
             name="address"
-            className="w-full border rounded px-3 py-2"
-            required
             value={shippingInfo.address}
             onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+            required
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="city" className="block mb-1 font-medium">City</label>
+            <label htmlFor="city" className="block mb-1 font-medium">{t('shipping.city')}</label>
             <input
               type="text"
               id="city"
               name="city"
-              className="w-full border rounded px-3 py-2"
-              required
               value={shippingInfo.city}
               onChange={handleChange}
+              className="w-full border rounded px-3 py-2"
+              required
             />
           </div>
           <div>
-            <label htmlFor="country" className="block mb-1 font-medium">Country</label>
-            <select
-              id="country"
-              name="country"
-              className="w-full border rounded px-3 py-2"
-              required
-              value={shippingInfo.country}
-              onChange={handleChange}
-            >
-              <option value="">Select a country</option>
-              {allCountries.map(country => (
-                <option key={country} value={country}>{country}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="postalCode" className="block mb-1 font-medium">Postal Code</label>
+            <label htmlFor="postalCode" className="block mb-1 font-medium">{t('shipping.postalCode')}</label>
             <input
               type="text"
               id="postalCode"
               name="postalCode"
-              className="w-full border rounded px-3 py-2"
-              required
               value={shippingInfo.postalCode}
               onChange={handleChange}
-            />
-          </div>
-          <div>
-            <label htmlFor="phoneNumber" className="block mb-1 font-medium">Phone Number</label>
-            <input
-              type="tel"
-              id="phoneNumber"
-              name="phoneNumber"
               className="w-full border rounded px-3 py-2"
               required
-              value={shippingInfo.phoneNumber}
-              onChange={handleChange}
             />
           </div>
         </div>
         <div>
-          <label htmlFor="shippingMethod" className="block mb-1 font-medium">Shipping Method</label>
+          <label htmlFor="country" className="block mb-1 font-medium">{t('shipping.country')}</label>
+          <select
+            id="country"
+            name="country"
+            value={shippingInfo.country}
+            onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+            required
+          >
+            <option value="">{t('shipping.selectCountry')}</option>
+            {allCountries.map(country => (
+              <option key={country} value={country}>{country}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="phoneNumber" className="block mb-1 font-medium">{t('shipping.phoneNumber')}</label>
+          <input
+            type="tel"
+            id="phoneNumber"
+            name="phoneNumber"
+            value={shippingInfo.phoneNumber}
+            onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="shippingMethod" className="block mb-1 font-medium">{t('shipping.shippingMethod')}</label>
           <select
             id="shippingMethod"
             name="shippingMethod"
-            className="w-full border rounded px-3 py-2"
-            required
             value={shippingInfo.shippingMethod}
             onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+            required
           >
-            <option value="dpd_standard">DPD (3-5 business days)</option>
-            <option value="dhl_standard">DHL (3-5 business days)</option>
+            <option value="dpd_standard">{t('shipping.dpdStandard')}</option>
+            <option value="dhl_standard">{t('shipping.dhlStandard')}</option>
           </select>
         </div>
         <button
           type="submit"
-          className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300"
+          className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300 mt-6"
         >
-          Proceed to Payment
+          {t('shipping.proceedToPayment')}
         </button>
       </form>
     </div>
@@ -955,6 +1018,7 @@ const Shipping = ({ saveShippingInfo, fetchUserInfo, trackEvent }) => {
 };
 
 const Payment = ({ savePaymentInfo, createOrder, fetchUserInfo, cart, trackEvent, clearCart }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [paymentInfo, setPaymentInfo] = useState({
     cardholderName: '',
@@ -969,6 +1033,7 @@ const Payment = ({ savePaymentInfo, createOrder, fetchUserInfo, cart, trackEvent
     }
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const loadUserInfo = async () => {
@@ -999,155 +1064,168 @@ const Payment = ({ savePaymentInfo, createOrder, fetchUserInfo, cart, trackEvent
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
     try {
       await savePaymentInfo(paymentInfo);
       const orderDetails = {
         items: cart,
         total: cart.reduce((total, item) => total + item.price, 0),
-        status: 'pending'
+        status: t('orderStatus.pending')
       };
       const orderId = await createOrder(orderDetails);
       trackEvent('purchase', 'Ecommerce', 'Purchase Complete', orderDetails.total);
-      //alert(`Order placed successfully! Order ID: ${orderId}`);
       clearCart();
       navigate('/order-confirmation', { state: { orderId } });
     } catch (error) {
       console.error('Error processing payment:', error);
+      setError(t('paymentPage.errorProcessing'));
+    } finally {
+      setLoading(false);
     }
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div className="text-center py-8">{t('paymentPage.loading')}</div>;
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Payment Information</h1>
-      <form className="space-y-4" onSubmit={handleSubmit}>
+    <div className="max-w-2xl mx-auto py-8">
+      <h1 className="text-3xl font-bold mb-6">{t('paymentPage.title')}</h1>
+
+      <button onClick={() => navigate('/shipping')} className="flex items-center text-blue-500 hover:text-blue-700 mb-6">
+        <ArrowLeft className="mr-2" size={20} />
+        {t('paymentPage.backToShipping')}
+      </button>
+
+      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">{error}</div>}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="cardholderName" className="block mb-1 font-medium">Cardholder Name</label>
+          <label htmlFor="cardholderName" className="block mb-1 font-medium">{t('paymentPage.cardholderName')}</label>
           <input
             type="text"
             id="cardholderName"
             name="cardholderName"
-            className="w-full border rounded px-3 py-2"
-            required
             value={paymentInfo.cardholderName}
             onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+            required
           />
         </div>
         <div>
-          <label htmlFor="cardNumber" className="block mb-1 font-medium">Card Number</label>
+          <label htmlFor="cardNumber" className="block mb-1 font-medium">{t('paymentPage.cardNumber')}</label>
           <input
             type="text"
             id="cardNumber"
             name="cardNumber"
-            className="w-full border rounded px-3 py-2"
-            required
             value={paymentInfo.cardNumber}
             onChange={handleChange}
-            placeholder="1234 5678 9012 3456"
+            className="w-full border rounded px-3 py-2"
+            required
+            placeholder={t('paymentPage.cardNumberPlaceholder')}
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="expiryDate" className="block mb-1 font-medium">Expiry Date</label>
+            <label htmlFor="expiryDate" className="block mb-1 font-medium">{t('paymentPage.expiryDate')}</label>
             <input
               type="text"
               id="expiryDate"
               name="expiryDate"
-              className="w-full border rounded px-3 py-2"
-              required
               value={paymentInfo.expiryDate}
               onChange={handleChange}
-              placeholder="MM/YY"
+              className="w-full border rounded px-3 py-2"
+              required
+              placeholder={t('paymentPage.expiryDatePlaceholder')}
             />
           </div>
           <div>
-            <label htmlFor="cvv" className="block mb-1 font-medium">CVV</label>
+            <label htmlFor="cvv" className="block mb-1 font-medium">{t('paymentPage.cvv')}</label>
             <input
               type="text"
               id="cvv"
               name="cvv"
-              className="w-full border rounded px-3 py-2"
-              required
               value={paymentInfo.cvv}
               onChange={handleChange}
-              placeholder="123"
+              className="w-full border rounded px-3 py-2"
+              required
+              placeholder={t('paymentPage.cvvPlaceholder')}
             />
           </div>
         </div>
-        <h2 className="text-2xl font-bold mt-6 mb-4">Billing Address</h2>
+        <h2 className="text-2xl font-bold mt-6 mb-4">{t('paymentPage.billingAddress')}</h2>
         <div>
-          <label htmlFor="billing.street" className="block mb-1 font-medium">Street Address</label>
+          <label htmlFor="billing.street" className="block mb-1 font-medium">{t('paymentPage.street')}</label>
           <input
             type="text"
             id="billing.street"
             name="billing.street"
-            className="w-full border rounded px-3 py-2"
-            required
             value={paymentInfo.billingAddress.street}
             onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+            required
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="billing.city" className="block mb-1 font-medium">City</label>
+            <label htmlFor="billing.city" className="block mb-1 font-medium">{t('paymentPage.city')}</label>
             <input
               type="text"
               id="billing.city"
               name="billing.city"
-              className="w-full border rounded px-3 py-2"
-              required
               value={paymentInfo.billingAddress.city}
               onChange={handleChange}
+              className="w-full border rounded px-3 py-2"
+              required
             />
           </div>
           <div>
-            <label htmlFor="billing.country" className="block mb-1 font-medium">Country</label>
+            <label htmlFor="billing.country" className="block mb-1 font-medium">{t('paymentPage.country')}</label>
             <input
               type="text"
               id="billing.country"
               name="billing.country"
-              className="w-full border rounded px-3 py-2"
-              required
               value={paymentInfo.billingAddress.country}
               onChange={handleChange}
+              className="w-full border rounded px-3 py-2"
+              required
             />
           </div>
         </div>
         <div>
-          <label htmlFor="billing.postalCode" className="block mb-1 font-medium">Postal Code</label>
+          <label htmlFor="billing.postalCode" className="block mb-1 font-medium">{t('paymentPage.postalCode')}</label>
           <input
             type="text"
             id="billing.postalCode"
             name="billing.postalCode"
-            className="w-full border rounded px-3 py-2"
-            required
             value={paymentInfo.billingAddress.postalCode}
             onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+            required
           />
         </div>
         <div className="mt-6">
-          <h2 className="text-2xl font-bold mb-4">Order Summary</h2>
+          <h2 className="text-2xl font-bold mb-4">{t('paymentPage.orderSummary')}</h2>
           <div className="border-t border-b py-4">
             {cart.map((item, index) => (
               <div key={index} className="flex justify-between items-center mb-2">
                 <span>{item.name}</span>
-                <span>${item.price.toFixed(2)}</span>
+                <span>{t('product.price', { symbol: t('currency.symbol'), amount: item.price.toFixed(2) })}</span>
               </div>
             ))}
           </div>
           <div className="flex justify-between items-center font-bold text-lg mt-4">
-            <span>Total:</span>
-            <span>${cart.reduce((total, item) => total + item.price, 0).toFixed(2)}</span>
+            <span>{t('paymentPage.total')}:</span>
+            <span>{t('product.price', { symbol: t('currency.symbol'), amount: cart.reduce((total, item) => total + item.price, 0).toFixed(2) })}</span>
           </div>
         </div>
         <button
           type="submit"
           className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300 mt-6"
+          disabled={loading}
         >
-          Complete Purchase
+          {loading ? t('paymentPage.loading') : t('paymentPage.completePurchase')}
         </button>
       </form>
     </div>
@@ -1155,42 +1233,69 @@ const Payment = ({ savePaymentInfo, createOrder, fetchUserInfo, cart, trackEvent
 };
 
 const OrderHistory = ({ fetchUserOrders }) => {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadOrders = async () => {
-      const userOrders = await fetchUserOrders();
-      setOrders(userOrders);
-      setLoading(false);
+      try {
+        const userOrders = await fetchUserOrders();
+        setOrders(userOrders);
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     loadOrders();
   }, [fetchUserOrders]);
 
   if (loading) {
-    return <div>Loading orders...</div>;
+    return <div className="text-center py-8">{t('orderHistory.loading')}</div>;
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Order History</h1>
+    <div className="max-w-4xl mx-auto py-8">
+      <h1 className="text-3xl font-bold mb-6">{t('orderHistory.title')}</h1>
       {orders.length === 0 ? (
-        <p>You haven't placed any orders yet.</p>
+        <p className="text-center text-gray-500">{t('orderHistory.noOrders')}</p>
       ) : (
-        orders.map((order) => (
-          <div key={order.id} className="border p-4 mb-4 rounded">
-            <h2 className="text-xl font-bold">Order ID: {order.id}</h2>
-            <p>Date: {new Date(order.createdAt.seconds * 1000).toLocaleDateString()}</p>
-            <p>Status: {order.status}</p>
-            <p>Total: ${order.total.toFixed(2)}</p>
-            <h3 className="font-bold mt-2">Items:</h3>
-            <ul>
-              {order.items.map((item, index) => (
-                <li key={index}>{item.name} - ${item.price.toFixed(2)}</li>
-              ))}
-            </ul>
-          </div>
-        ))
+        <div className="space-y-6">
+          {orders.map((order) => (
+            <div key={order.id} className="bg-white shadow-md rounded-lg p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">
+                  {t('orderHistory.orderId')}: {order.id}
+                </h2>
+                <span className="text-sm text-gray-500">
+                  {t('orderHistory.date')}: {new Date(order.createdAt.seconds * 1000).toLocaleDateString()}
+                </span>
+              </div>
+              <p>
+                <strong>{t('orderHistory.status')}:</strong> {order.status}
+              </p>
+              <p>
+                <strong>{t('orderHistory.total')}:</strong> {t('product.price', { symbol: t('currency.symbol'), amount: order.total.toFixed(2) })}
+              </p>
+              <h3 className="font-bold mt-4 mb-2">{t('orderHistory.items')}:</h3>
+              <ul className="list-disc list-inside">
+                {order.items.map((item, index) => (
+                  <li key={index}>
+                    {item.name} - {t('product.price', { symbol: t('currency.symbol'), amount: item.price.toFixed(2) })}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                to={`/order-confirmation`}
+                state={{ orderId: order.id }}
+                className="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300"
+              >
+                {t('orderHistory.viewDetails')}
+              </Link>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -1201,6 +1306,7 @@ const OrderConfirmation = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const orderId = location.state?.orderId;
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -1225,15 +1331,15 @@ const OrderConfirmation = () => {
   }, [orderId]);
 
   if (loading) {
-    return <div className="text-center py-8">Loading order details...</div>;
+    return <div className="text-center py-8">{t('orderConfirmation.loading')}</div>;
   }
 
   if (!order) {
     return (
       <div className="max-w-2xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold mb-4">Order Not Found</h1>
-        <p>We couldn't find the order you're looking for. Please check your order ID and try again.</p>
-        <Link to="/" className="text-blue-500 hover:underline mt-4 inline-block">Return to Home</Link>
+        <h1 className="text-3xl font-bold mb-4">{t('orderConfirmation.orderNotFound')}</h1>
+        <p>{t('orderConfirmation.orderNotFoundMessage')}</p>
+        <Link to="/" className="text-blue-500 hover:underline mt-4 inline-block">{t('orderConfirmation.returnHome')}</Link>
       </div>
     );
   }
@@ -1242,47 +1348,47 @@ const OrderConfirmation = () => {
     <div className="max-w-2xl mx-auto py-8 px-4">
       <div className="text-center mb-8">
         <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-        <h1 className="text-3xl font-bold mb-2">Order Confirmed!</h1>
-        <p className="text-xl text-gray-600">Thank you for your purchase.</p>
+        <h1 className="text-3xl font-bold mb-2">{t('orderConfirmation.title')}</h1>
+        <p className="text-xl text-gray-600">{t('orderConfirmation.thankYou')}</p>
       </div>
 
       <div className="bg-gray-100 rounded-lg p-6 mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Order Details</h2>
-        <p><strong>Order ID:</strong> {order.id}</p>
-        <p><strong>Date:</strong> {new Date(order.createdAt.seconds * 1000).toLocaleString()}</p>
-        <p><strong>Status:</strong> {order.status}</p>
-        <p><strong>Total:</strong> ${order.total.toFixed(2)}</p>
+        <h2 className="text-2xl font-semibold mb-4">{t('orderConfirmation.orderDetails')}</h2>
+        <p><strong>{t('orderConfirmation.orderId')}:</strong> {order.id}</p>
+        <p><strong>{t('orderConfirmation.date')}:</strong> {new Date(order.createdAt.seconds * 1000).toLocaleString()}</p>
+        <p><strong>{t('orderConfirmation.status')}:</strong> {order.status}</p>
+        <p><strong>{t('orderConfirmation.total')}:</strong> {t('product.price', { symbol: t('currency.symbol'), amount: order.total.toFixed(2) })}</p>
       </div>
 
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Order Summary</h2>
+        <h2 className="text-2xl font-semibold mb-4">{t('orderConfirmation.orderSummary')}</h2>
         {order.items.map((item, index) => (
           <div key={index} className="flex justify-between items-center border-b py-2">
             <span>{item.name}</span>
-            <span>${item.price.toFixed(2)}</span>
+            <span>{t('product.price', { symbol: t('currency.symbol'), amount: item.price.toFixed(2) })}</span>
           </div>
         ))}
         <div className="flex justify-between items-center font-bold mt-4">
-          <span>Total</span>
-          <span>${order.total.toFixed(2)}</span>
+          <span>{t('orderConfirmation.total')}</span>
+          <span>{t('product.price', { symbol: t('currency.symbol'), amount: order.total.toFixed(2) })}</span>
         </div>
       </div>
 
       <div className="bg-blue-50 rounded-lg p-6 mb-8">
-        <h2 className="text-2xl font-semibold mb-4">What's Next?</h2>
+        <h2 className="text-2xl font-semibold mb-4">{t('orderConfirmation.whatsNext')}</h2>
         <div className="flex items-center mb-4">
           <Package className="w-6 h-6 mr-2 text-blue-500" />
-          <span>We're preparing your order for shipment.</span>
+          <span>{t('orderConfirmation.preparingOrder')}</span>
         </div>
         <div className="flex items-center">
           <Truck className="w-6 h-6 mr-2 text-blue-500" />
-          <span>You'll receive a shipping confirmation email once your order is on its way.</span>
+          <span>{t('orderConfirmation.shippingConfirmation')}</span>
         </div>
       </div>
 
       <div className="text-center">
         <Link to="/" className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition duration-300">
-          Continue Shopping
+          {t('orderConfirmation.continueShopping')}
         </Link>
       </div>
     </div>
