@@ -715,59 +715,66 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
 
 const Cart = ({ cart, removeFromCart }) => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
 
   const total = cart.reduce((total, item) => total + item.price, 0);
 
   return (
     <div className="max-w-2xl mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">{t('cart.title')}</h1>
-
+      
       <Link to="/" className="flex items-center text-blue-500 hover:text-blue-700 mb-6">
         <ArrowLeft className="mr-2" size={20} />
         {t('cart.continueShopping')}
       </Link>
 
       {cart.length === 0 ? (
-        <p className="text-center text-gray-500">{t('cart.empty')}</p>
+        <div className="text-center py-12">
+          <ShoppingCart size={64} className="mx-auto text-gray-400 mb-4" />
+          <h2 className="text-2xl font-semibold mb-2">{t('cart.empty')}</h2>
+          <p className="text-gray-600 mb-6">{t('cart.emptyMessage')}</p>
+          <Link
+            to="/"
+            className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition duration-300"
+          >
+            {t('cart.startShopping')}
+          </Link>
+        </div>
       ) : (
         <>
-          <div className="space-y-4">
-            {cart.map((item, index) => (
-              <div key={index} className={`flex items-center pb-4 ${index !== cart.length - 1 ? 'border-b' : ''}`}>
-                <img src={item.imageUrl} alt={item.name} className="w-20 h-20 object-cover mr-4" />
-                <div className="flex-grow">
-                  <h3 className="font-bold">{item.name}</h3>
-                  <p className="text-gray-600">
-                    {t('product.price', {
-                      symbol: t('currency.symbol'),
-                      amount: item.price.toFixed(2)
-                    })}
-                  </p>
-                </div>
-                <button
-                  onClick={() => removeFromCart(index)}
-                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition duration-300"
-                >
-                  {t('cart.remove')}
-                </button>
+          {cart.map((item, index) => (
+            <div key={index} className="flex items-center mb-4  pb-4">
+              <img src={item.imageUrl} alt={item.name} className="w-20 h-20 object-cover mr-4" />
+              <div className="flex-grow">
+                <h3 className="font-bold">{item.name}</h3>
+                <p className="text-gray-600">
+                  {t('product.price', { 
+                    symbol: t('currency.symbol'), 
+                    amount: item.price.toFixed(2) 
+                  })}
+                </p>
               </div>
-            ))}
-          </div>
+              <button
+                onClick={() => removeFromCart(index)}
+                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition duration-300"
+              >
+                {t('cart.remove')}
+              </button>
+            </div>
+          ))}
 
           <div className="mt-6 pt-4 border-t">
             <p className="font-bold text-xl mb-4">
-              {t('cart.total')}: {t('product.price', {
-                symbol: t('currency.symbol'),
-                amount: total.toFixed(2)
+              {t('cart.total')}: {t('product.price', { 
+                symbol: t('currency.symbol'), 
+                amount: total.toFixed(2) 
               })}
             </p>
-            <button
-              onClick={() => navigate('/shipping')}
-              className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300"
+            <Link
+              to="/shipping"
+              className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300 inline-block text-center"
             >
               {t('cart.proceedToCheckout')}
-            </button>
+            </Link>
           </div>
         </>
       )}

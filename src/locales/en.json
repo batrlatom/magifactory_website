@@ -36,7 +36,9 @@
         "remove": "Remove",
         "total": "Total",
         "proceedToCheckout": "Proceed to Checkout",
-        "empty": "Your cart is empty"
+        "empty": "Your cart is empty",
+        "emptyMessage": "Looks like you haven't added any items to your cart yet.",
+        "startShopping": "Start Shopping"
     },
     "shipping": {
         "title": "Shipping Information",

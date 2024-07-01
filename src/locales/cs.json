@@ -36,7 +36,9 @@
     "remove": "Odstranit",
     "total": "Celkem",
     "proceedToCheckout": "Pokračovat k pokladně",
-    "empty": "Váš košík je prázdný"
+    "empty": "Váš košík je prázdný",
+    "emptyMessage": "Vypadá to, že jste do košíku zatím nepřidali žádné položky.",
+    "startShopping": "Začít nakupovat"
   },
   "shipping": {
     "title": "Doručovací údaje",
