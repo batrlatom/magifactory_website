@@ -1,19 +1,38 @@
 import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
-
+import { useTranslation } from 'react-i18next';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
 
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import { db, storage, auth } from './firebase';
-import { getCountFromServer, collection, getDocs, doc, setDoc, getDoc, updateDoc, addDoc, query, where, orderBy, onSnapshot, increment, startAfter, limit  } from 'firebase/firestore';
+import { getCountFromServer, collection, getDocs, doc, setDoc, getDoc, updateDoc, addDoc, query, where, orderBy, onSnapshot, increment, startAfter, limit } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { ArrowLeft, Twitter, Facebook, Share2, ThumbsUp, ShoppingCart } from 'lucide-react';
 import { CheckCircle, Package, Truck } from 'lucide-react';
 
 import './App.css';
+import enTranslations from './locales/en.json';
+import csTranslations from './locales/cs.json';
+
 
 const LastViewedProductContext = React.createContext();
 
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources: {
+      en: { translation: enTranslations },
+      cs: { translation: csTranslations },
+    },
+    fallbackLng: 'en',
+    interpolation: {
+      escapeValue: false,
+    },
+  });
 
 // Custom hook for Google Analytics tracking
 const useAnalytics = () => {
@@ -84,6 +103,8 @@ const App = () => {
 
 // AppContent component (wrapped by Router)
 const AppContent = () => {
+  const { t } = useTranslation();
+
   const [cart, setCart] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -93,7 +114,11 @@ const AppContent = () => {
   const [voteCount, setVoteCount] = useState(0);
 
   const [lastViewedProductId, setLastViewedProductId] = useState(null);
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage('cs');
+  };
 
+  
 
   // Use the custom hook for real-time products fetching
   const { data: rawProducts, loading: productsLoading, error: productsError } = useRealtimeCollection('products');
@@ -145,7 +170,7 @@ const AppContent = () => {
       localStorage.removeItem('sessionCart');
     }
   };
-  
+
 
   const handleVote = async (productId) => {
     if (!user) {
@@ -303,59 +328,63 @@ const AppContent = () => {
 
   return (
 
-      <LastViewedProductContext.Provider value={{ lastViewedProductId, setLastViewedProductId }}>
+    <LastViewedProductContext.Provider value={{ lastViewedProductId, setLastViewedProductId }}>
 
-        <div className="container mx-auto p-4">
-          <nav className="mb-4 flex justify-between items-center">
-            <Link to="/" className="text-blue-500 hover:text-blue-700 text-xl font-bold">
-              <img src="/logo.svg" alt="MagiFactory" className="h-8 w-auto" />
+      <div className="container mx-auto p-4">
+        <nav className="mb-4 flex justify-between items-center">
+          <Link to="/" className="text-blue-500 hover:text-blue-700 text-xl font-bold">
+            <img src="/logo.svg" alt="MagiFactory" className="h-8 w-auto" />
 
+          </Link>
+          <div className="flex items-center">
+            <Link to="/cart" className="flex items-center text-blue-500 hover:text-blue-700 mr-4">
+              <ShoppingCart size={24} />
+              {cart.length > 0 && <span className="ml-1">{cart.length}</span>}
             </Link>
-            <div className="flex items-center">
-              <Link to="/cart" className="flex items-center text-blue-500 hover:text-blue-700 mr-4">
-                <ShoppingCart size={24} />
-                {cart.length > 0 && <span className="ml-1">{cart.length}</span>}
-              </Link>
-              {user ? (
-                <div className="flex items-center">
-                  <span className="mr-2">Welcome, {user.displayName}!</span>
-                  <button onClick={handleLogout} className="px-4 py-2 rounded">Logout</button>
-                </div>
-              ) : (
-                <button onClick={handleLogin} className="bg-blue-500 text-white px-4 py-2 rounded">Login</button>
-              )}
-            </div>
-          </nav>
-          <Routes>
-            <Route path="/" element={<LandingPage products={products} />} />
-            <Route path="/product/:id" element={<ProductPage products={products} addToCart={addToCart} handleVote={handleVote} />} />
-            <Route path="/cart" element={<Cart cart={cart} removeFromCart={removeFromCart} />} />
-            <Route path="/" element={<LandingPage products={products} />} />
+            {user ? (
+              <div className="flex items-center">
+                <span className="mr-2">Welcome, {user.displayName}!</span>
+                <button onClick={handleLogout} className="px-4 py-2 rounded">{t('logout')}</button>
+              </div>
+            ) : (
+              <button onClick={handleLogin} className="bg-blue-500 text-white px-4 py-2 rounded">{t('login')}</button>
 
-            <Route path="/shipping" element={<Shipping saveShippingInfo={saveShippingInfo} fetchUserInfo={fetchUserInfo} trackEvent={trackEvent} />} />
-            <Route path="/payment" element={<Payment updateCart={updateCart} savePaymentInfo={savePaymentInfo} createOrder={createOrder} fetchUserInfo={fetchUserInfo} cart={cart} trackEvent={trackEvent} clearCart={clearCart}/> } />
-            <Route path="/orders" element={<OrderHistory fetchUserOrders={fetchUserOrders} />} />
-            <Route path="/order-confirmation" element={<OrderConfirmation />} />
-          </Routes>
-        </div>
-      </LastViewedProductContext.Provider>
+            )}
+          </div>
+        </nav>
+        <Routes>
+          <Route path="/" element={<LandingPage products={products} />} />
+          <Route path="/product/:id" element={<ProductPage products={products} addToCart={addToCart} handleVote={handleVote} />} />
+          <Route path="/cart" element={<Cart cart={cart} removeFromCart={removeFromCart} />} />
+          <Route path="/" element={<LandingPage products={products} />} />
+
+          <Route path="/shipping" element={<Shipping saveShippingInfo={saveShippingInfo} fetchUserInfo={fetchUserInfo} trackEvent={trackEvent} />} />
+          <Route path="/payment" element={<Payment updateCart={updateCart} savePaymentInfo={savePaymentInfo} createOrder={createOrder} fetchUserInfo={fetchUserInfo} cart={cart} trackEvent={trackEvent} clearCart={clearCart} />} />
+          <Route path="/orders" element={<OrderHistory fetchUserOrders={fetchUserOrders} />} />
+          <Route path="/order-confirmation" element={<OrderConfirmation />} />
+        </Routes>
+      </div>
+    </LastViewedProductContext.Provider>
   );
 };
 
 
 
+
 const HeroSection = ({ scrollToProducts }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex items-center">
         <div className="w-1/2 pr-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Bring AI-designed t-shirts to life with MagiFactory</h1>
-          <p className="text-xl text-gray-600 mb-6">Our AI bot creates a unique t-shirt design every minute. Team up with friends to vote on your favorites and turn virtual designs into real, wearable art. Join the AI fashion revolution today!</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">{t('hero.title')}</h1>
+          <p className="text-xl text-gray-600 mb-6">{t('hero.description')}</p>
           <button
             onClick={scrollToProducts}
             className="bg-blue-600 text-white px-6 py-3 rounded-md text-lg font-semibold hover:bg-blue-700 transition duration-300"
           >
-            GET STARTED
+            {t('hero.cta')}
           </button>
         </div>
         <div className="w-1/2">
@@ -365,6 +394,7 @@ const HeroSection = ({ scrollToProducts }) => {
     </div>
   );
 };
+
 
 const LandingPage = () => {
   const [products, setProducts] = useState([]);
@@ -410,7 +440,7 @@ const LandingPage = () => {
           return { id: doc.id, ...data, imageUrl };
         })
       );
-      
+
       const filteredNewProducts = newProducts.filter(Boolean);
 
       if (filteredNewProducts.length > 0) {
@@ -472,9 +502,9 @@ const LandingPage = () => {
     <div>
       <HeroSection scrollToProducts={scrollToProducts} />
       {error && <div className="text-center py-4 text-red-500">{error}</div>}
-      <ProductGrid 
-        products={products} 
-        productListRef={productListRef} 
+      <ProductGrid
+        products={products}
+        productListRef={productListRef}
         productRefs={productRefs}
         lastProductRef={lastProductRef}
       />
@@ -490,10 +520,10 @@ const ProductGrid = React.memo(({ products, productListRef, productRefs, lastPro
     <div ref={productListRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {products.map((product, index) => (
-          <Link 
-            key={product.id} 
-            to={`/product/${product.id}`} 
-            className="block" 
+          <Link
+            key={product.id}
+            to={`/product/${product.id}`}
+            className="block"
             ref={el => {
               productRefs.current[product.id] = el;
               if (index === products.length - 1) {
@@ -518,6 +548,7 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
   const [product, setProduct] = useState(null);
   const [hasVoted, setHasVoted] = useState(false);
   const { setLastViewedProductId } = React.useContext(LastViewedProductContext);
+  const { t } = useTranslation();
 
 
 
@@ -532,23 +563,23 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
 
   if (!product) return <div>Loading...</div>;
 
-/*
-  useEffect(() => {
-    const checkUserVote = async () => {
-      if (user && product) {
-        const voteDoc = await getDoc(doc(db, 'votes', `${user.uid}_${product.id}`));
-        setHasVoted(voteDoc.exists());
-      }
-    };
-
-    checkUserVote();
-  }, [user, product]);
-  */
+  /*
+    useEffect(() => {
+      const checkUserVote = async () => {
+        if (user && product) {
+          const voteDoc = await getDoc(doc(db, 'votes', `${user.uid}_${product.id}`));
+          setHasVoted(voteDoc.exists());
+        }
+      };
+  
+      checkUserVote();
+    }, [user, product]);
+    */
 
   if (!product) return <div>Product not found</div>;
 
   const shareUrl = `${window.location.origin}/product/${id}`;
-  const shareText = `Check out this awesome product: ${product.name}`;
+  const shareText = t('product.shareText', { productName: product.name });
 
 
 
@@ -590,7 +621,7 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
         className="mb-4 flex items-center text-blue-500 hover:text-blue-700"
       >
         <ArrowLeft className="mr-2" size={20} />
-        Back to Products
+        {t('product.backToProducts')}
       </button>
       <div className="flex flex-col md:flex-row gap-8">
         <div className="md:w-1/2">
@@ -602,7 +633,8 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
           <div className="md:w-1/3">
 
             <p className="text-gray-600 mb-4">{product.description}</p>
-            <p className="text-2xl font-bold text-green-600 mb-4">${product.price.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-green-600 mb-4">            {t('product.price', { symbol: t('currency.symbol'), amount: product.price.toFixed(2) })}
+</p>
 
             <button
               onClick={() => {
@@ -611,7 +643,7 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
               }}
               className="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition duration-300 mb-6"
             >
-              Add to Cart
+               {t('product.addToCart')}
             </button>
 
             {/* Improved voting block */}
@@ -623,16 +655,17 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
                 disabled={hasVoted}
               >
                 <ThumbsUp className="mr-2" size={18} />
-                {hasVoted ? 'Voted' : 'Vote'}
+                {hasVoted ? 'Voted' : t('product.vote')}
               </button>
-              <span className="text-lg font-semibold">{product.voteCount || 0} votes</span>
+              <span className="text-lg font-semibold">              {t('product.voteCount', { count: product.voteCount || 0 })}
+</span>
             </div>
 
 
 
             {/* Improved sharing block */}
             <div className="mt-6">
-              <p className="text-lg font-semibold mb-3">Share this product:</p>
+              <p className="text-lg font-semibold mb-3">{t('product.shareProduct')}</p>
               <div className="flex space-x-3">
                 <button
                   onClick={() => handleShare('twitter')}

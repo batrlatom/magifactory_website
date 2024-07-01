@@ -1,0 +1,29 @@
+{
+    "welcome": "Vitaj, {{name}}!",
+    "login": "Logni sa",
+    "logout": "Vypni",
+    "cart": "Kybl",
+    "continueShopping": "Continue Shopping",
+    "remove": "Remove",
+    "total": "Total",
+    "proceedToCheckout": "Proceed to Checkout",
+    "hero": {
+      "title": "Oživte AI navržená trička s MagiFactory",
+      "description": "Náš AI bot vytváří každou minutu unikátní design trička. Spojte se s přáteli, hlasujte o svých oblíbených a proměňte virtuální návrhy v skutečné, nositelné umění. Připojte se dnes k AI módní revoluci!",
+      "cta": "ZAČÍT"
+    },
+    "product": {
+      "backToProducts": "Zpět na produkty",
+      "price": "{{amount}} {{symbol}}",
+      "addToCart": "Přidat do košíku",
+      "vote": "Hlasovat",
+      "voteCount": "{{count}} hlas",
+      "voteCount_plural": "{{count}} hlasů",
+      "shareProduct": "Sdílet tento produkt:",
+      "shareText": "Mrkni na tuhle zajimavou stranku: {{productName}}"
+
+    },
+    "currency": {
+      "symbol": "Kč"
+    }
+  }
