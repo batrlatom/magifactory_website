@@ -336,7 +336,6 @@ const AppContent = () => {
             <Route path="/payment" element={<Payment updateCart={updateCart} savePaymentInfo={savePaymentInfo} createOrder={createOrder} fetchUserInfo={fetchUserInfo} cart={cart} trackEvent={trackEvent} clearCart={clearCart}/> } />
             <Route path="/orders" element={<OrderHistory fetchUserOrders={fetchUserOrders} />} />
             <Route path="/order-confirmation" element={<OrderConfirmation />} />
-
           </Routes>
         </div>
       </LastViewedProductContext.Provider>
@@ -683,7 +682,7 @@ const Cart = ({ cart, removeFromCart }) => {
   const navigate = useNavigate();
   const { trackEvent } = useAnalytics();
 
-  useEffect(() => {
+  /*useEffect(() => {
     if (cart.length === 0) {
       navigate('/');
     }
@@ -691,7 +690,7 @@ const Cart = ({ cart, removeFromCart }) => {
 
   if (cart.length === 0) {
     return null;
-  }
+  }*/
 
   return (
     <div>
