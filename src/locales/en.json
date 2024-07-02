@@ -6,6 +6,8 @@
     "remove": "Remove",
     "total": "Total",
     "proceedToCheckout": "Proceed to Checkout",
+    "loading": "Loading...",
+    "notFound": "Product not found",
     "navbar": {
         "yourOrders": "Your Orders",
         "welcome": "Welcome, {{name}}!",
@@ -17,6 +19,7 @@
         "description": "Our AI bot creates a unique t-shirt design every minute. Team up with friends to vote on your favorites and turn virtual designs into real, wearable art. Join the AI fashion revolution today!",
         "cta": "GET STARTED"
     },
+
     "product": {
         "backToProducts": "Back to Products",
         "price": "{{symbol}}{{amount}}",
@@ -26,6 +29,7 @@
         "voteCount_plural": "{{count}} votes",
         "shareProduct": "Share this product:",
         "shareText": "Check out this awesome product: {{productName}}"
+        
     },
     "currency": {
         "symbol": "$"
@@ -105,8 +109,13 @@
         "items": "Items",
         "viewDetails": "View Details",
         "loading": "Loading orders..."
-      },
-      "orderStatus": {
+    },
+    "orderStatus": {
         "pending": "Pending"
-      }
+    },
+    "voting": {
+        "loginRequired": "Please log in to vote.",
+        "alreadyVoted": "You have already voted for this product.",
+        "voteFailed": "Failed to vote. Please try again."
+    }
 }

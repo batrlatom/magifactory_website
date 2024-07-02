@@ -172,37 +172,38 @@ const AppContent = () => {
   };
 
 
-  const handleVote = async (productId) => {
-    if (!user) {
-      alert('Please log in to vote.');
-      return;
-    }
 
-    const voteRef = doc(db, 'votes', `${user.uid}_${productId}`);
-    const voteDoc = await getDoc(voteRef);
+const handleVote = async (productId) => {
+  if (!user) {
+    alert(t('voting.loginRequired'));
+    return;
+  }
 
-    if (voteDoc.exists()) {
-      alert('You have already voted for this product.');
-      return;
-    }
+  const voteRef = doc(db, 'votes', `${user.uid}_${productId}`);
+  const voteDoc = await getDoc(voteRef);
 
-    try {
-      await updateDoc(doc(db, 'products', productId), {
-        voteCount: increment(1)
-      });
+  if (voteDoc.exists()) {
+    alert(t('voting.alreadyVoted'));
+    return;
+  }
 
-      await setDoc(voteRef, {
-        userId: user.uid,
-        productId: productId,
-        timestamp: new Date()
-      });
+  try {
+    await updateDoc(doc(db, 'products', productId), {
+      voteCount: increment(1)
+    });
 
-      trackEvent('product_vote', 'Product', productId);
-    } catch (error) {
-      console.error('Error voting for product:', error);
-      alert('Failed to vote. Please try again.');
-    }
-  };
+    await setDoc(voteRef, {
+      userId: user.uid,
+      productId: productId,
+      timestamp: new Date()
+    });
+
+    trackEvent('product_vote', 'Product', productId);
+  } catch (error) {
+    console.error('Error voting for product:', error);
+    alert(t('voting.voteFailed'));
+  }
+};
 
   const fetchUserCart = async (userId) => {
     const userCartRef = doc(db, 'carts', userId);
@@ -323,7 +324,7 @@ const AppContent = () => {
 
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div>{t('loading')}</div>;
   }
 
   return (
@@ -565,22 +566,9 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
     }
   }, [products, id, setLastViewedProductId]);
 
-  if (!product) return <div>Loading...</div>;
+  if (!product) return <div>{t('loading')}</div>;
 
-  /*
-    useEffect(() => {
-      const checkUserVote = async () => {
-        if (user && product) {
-          const voteDoc = await getDoc(doc(db, 'votes', `${user.uid}_${product.id}`));
-          setHasVoted(voteDoc.exists());
-        }
-      };
-  
-      checkUserVote();
-    }, [user, product]);
-    */
-
-  if (!product) return <div>Product not found</div>;
+  if (!product) return <div>{t('notFound')}</div>;
 
   const shareUrl = `${window.location.origin}/product/${id}`;
   const shareText = t('product.shareText', { productName: product.name });
@@ -637,7 +625,7 @@ const ProductPage = ({ products, addToCart, handleVote, user }) => {
           <div className="md:w-1/3">
 
             <p className="text-gray-600 mb-4">{product.description}</p>
-            <p className="text-2xl font-bold text-green-600 mb-4">            {t('product.price', { symbol: t('currency.symbol'), amount: product.price.toFixed(2) })}
+            <p className="text-4xl font-bold text-green-600 mb-4">            {t('product.price', { symbol: t('currency.symbol'), amount: product.price.toFixed(2) })}
             </p>
 
             <button
@@ -894,7 +882,7 @@ const Shipping = ({ saveShippingInfo, fetchUserInfo }) => {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading...</div>;
+    return <div className="text-center py-8">{t('loading')}</div>;
   }
 
   return (

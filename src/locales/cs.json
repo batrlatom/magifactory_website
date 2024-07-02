@@ -6,6 +6,8 @@
   "remove": "Remove",
   "total": "Total",
   "proceedToCheckout": "Proceed to Checkout",
+  "loading": "Načítání...",
+  "notFound": "Produkt nenalezen",
   "navbar": {
     "yourOrders": "Vaše objednávky",
     "welcome": "Vítejte, {{name}}!",
@@ -13,8 +15,8 @@
     "logout": "Odhlásit"
   },
   "hero": {
-    "title": "Oživte AI navržená trička s MagiFactory",
-    "description": "Náš AI bot vytváří každou minutu unikátní design trička. Spojte se s přáteli, hlasujte o svých oblíbených a proměňte virtuální návrhy v skutečné, nositelné umění. Připojte se dnes k AI módní revoluci!",
+    "title": "MagiFactory - Trička navržená umělou inteligencí",
+    "description": "Nové designy každou hodinu. Hlasujte pro své oblíbené a proměňte je ve skutečná trika",
     "cta": "ZAČÍT"
   },
   "product": {
@@ -108,5 +110,10 @@
   },
   "orderStatus": {
     "pending": "Čeká na zpracování"
+  },
+  "voting": {
+    "loginRequired": "Pro hlasování se prosím přihlaste.",
+    "alreadyVoted": "Pro tento produkt jste již hlasovali.",
+    "voteFailed": "Hlasování se nezdařilo. Zkuste to prosím znovu."
   }
 }
