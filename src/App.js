@@ -173,37 +173,37 @@ const AppContent = () => {
 
 
 
-const handleVote = async (productId) => {
-  if (!user) {
-    alert(t('voting.loginRequired'));
-    return;
-  }
+  const handleVote = async (productId) => {
+    if (!user) {
+      alert(t('voting.loginRequired'));
+      return;
+    }
 
-  const voteRef = doc(db, 'votes', `${user.uid}_${productId}`);
-  const voteDoc = await getDoc(voteRef);
+    const voteRef = doc(db, 'votes', `${user.uid}_${productId}`);
+    const voteDoc = await getDoc(voteRef);
 
-  if (voteDoc.exists()) {
-    alert(t('voting.alreadyVoted'));
-    return;
-  }
+    if (voteDoc.exists()) {
+      alert(t('voting.alreadyVoted'));
+      return;
+    }
 
-  try {
-    await updateDoc(doc(db, 'products', productId), {
-      voteCount: increment(1)
-    });
+    try {
+      await updateDoc(doc(db, 'products', productId), {
+        voteCount: increment(1)
+      });
 
-    await setDoc(voteRef, {
-      userId: user.uid,
-      productId: productId,
-      timestamp: new Date()
-    });
+      await setDoc(voteRef, {
+        userId: user.uid,
+        productId: productId,
+        timestamp: new Date()
+      });
 
-    trackEvent('product_vote', 'Product', productId);
-  } catch (error) {
-    console.error('Error voting for product:', error);
-    alert(t('voting.voteFailed'));
-  }
-};
+      trackEvent('product_vote', 'Product', productId);
+    } catch (error) {
+      console.error('Error voting for product:', error);
+      alert(t('voting.voteFailed'));
+    }
+  };
 
   const fetchUserCart = async (userId) => {
     const userCartRef = doc(db, 'carts', userId);
@@ -402,6 +402,10 @@ const HeroSection = ({ scrollToProducts }) => {
 
 
 const LandingPage = () => {
+
+  const { t } = useTranslation();
+
+
   const [products, setProducts] = useState([]);
   const [lastDoc, setLastDoc] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -513,9 +517,10 @@ const LandingPage = () => {
         productRefs={productRefs}
         lastProductRef={lastProductRef}
       />
-      {loading && <div className="text-center py-4">Loading more products...</div>}
+      {loading && <div className="text-center py-4">{t('product.loadingMore')}</div>}
       {!loading && !hasMore && products.length > 0 && <div className="text-center py-4"></div>}
-      {!loading && !hasMore && products.length === 0 && <div className="text-center py-4">No products available</div>}
+      {!loading && !hasMore && products.length === 0 && <div className="text-center py-4">{t('product.noProducts')}</div>}
+
     </div>
   );
 };
@@ -709,7 +714,7 @@ const Cart = ({ cart, removeFromCart }) => {
   return (
     <div className="max-w-2xl mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">{t('cart.title')}</h1>
-      
+
       <Link to="/" className="flex items-center text-blue-500 hover:text-blue-700 mb-6">
         <ArrowLeft className="mr-2" size={20} />
         {t('cart.continueShopping')}
@@ -735,9 +740,9 @@ const Cart = ({ cart, removeFromCart }) => {
               <div className="flex-grow">
                 <h3 className="font-bold">{item.name}</h3>
                 <p className="text-gray-600">
-                  {t('product.price', { 
-                    symbol: t('currency.symbol'), 
-                    amount: item.price.toFixed(2) 
+                  {t('product.price', {
+                    symbol: t('currency.symbol'),
+                    amount: item.price.toFixed(2)
                   })}
                 </p>
               </div>
@@ -752,9 +757,9 @@ const Cart = ({ cart, removeFromCart }) => {
 
           <div className="mt-6 pt-4 border-t">
             <p className="font-bold text-xl mb-4">
-              {t('cart.total')}: {t('product.price', { 
-                symbol: t('currency.symbol'), 
-                amount: total.toFixed(2) 
+              {t('cart.total')}: {t('product.price', {
+                symbol: t('currency.symbol'),
+                amount: total.toFixed(2)
               })}
             </p>
             <Link

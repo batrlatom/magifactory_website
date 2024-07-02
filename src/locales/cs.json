@@ -27,7 +27,9 @@
     "voteCount": "{{count}} hlas",
     "voteCount_plural": "{{count}} hlasů",
     "shareProduct": "Sdílet tento produkt:",
-    "shareText": "Mrkni na tuhle zajimavou stranku: {{productName}}"
+    "shareText": "Mrkni na tuhle zajimavou stranku: {{productName}}",
+     "loadingMore": "Načítání dalších produktů...",
+    "noProducts": "Žádné produkty k dispozici"
   },
   "currency": {
     "symbol": "Kč"

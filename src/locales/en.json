@@ -19,7 +19,6 @@
         "description": "Our AI bot creates a unique t-shirt design every minute. Team up with friends to vote on your favorites and turn virtual designs into real, wearable art. Join the AI fashion revolution today!",
         "cta": "GET STARTED"
     },
-
     "product": {
         "backToProducts": "Back to Products",
         "price": "{{symbol}}{{amount}}",
@@ -28,8 +27,9 @@
         "voteCount": "{{count}} vote",
         "voteCount_plural": "{{count}} votes",
         "shareProduct": "Share this product:",
-        "shareText": "Check out this awesome product: {{productName}}"
-        
+        "shareText": "Check out this awesome product: {{productName}}",
+        "loadingMore": "Loading more products...",
+        "noProducts": "No products available"
     },
     "currency": {
         "symbol": "$"
