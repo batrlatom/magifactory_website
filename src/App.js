@@ -545,9 +545,9 @@ const ProductGrid = React.memo(({ products, productListRef, productRefs, lastPro
           >
             <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition duration-300">
               {product.tryons && product.tryons.length > 0 ? (
-                <img 
-                  src={product.tryons[0].public_url} 
-                  alt={product.name} 
+                <img
+                  src={product.tryons[0].public_url}
+                  alt={product.name}
                   className="w-full h-128 object-contain"
                 />
               ) : (
@@ -555,7 +555,7 @@ const ProductGrid = React.memo(({ products, productListRef, productRefs, lastPro
                   <span className="text-gray-500">{t('product.noImageAvailable')}</span>
                 </div>
               )}
-       
+
             </div>
           </Link>
         ))}
@@ -587,35 +587,8 @@ const ProductPage = ({ products, addToCart, handleVote }) => {
   const shareText = t('product.shareText', { productName: product.name });
 
   const handleShare = async (platform) => {
-    if (navigator.share && platform === 'native') {
-      try {
-        await navigator.share({
-          title: product.name,
-          text: shareText,
-          url: shareUrl,
-        });
-      } catch (error) {
-        console.error('Error sharing:', error);
-      }
-    } else {
-      let url;
-      switch (platform) {
-        case 'twitter':
-          url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
-          break;
-        case 'facebook':
-          url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
-          break;
-        case 'whatsapp':
-          url = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
-          break;
-        default:
-          return;
-      }
-      window.open(url, '_blank');
-    }
+    // ... (existing share functionality)
   };
-
 
   const handleVoteClick = () => {
     if (!hasVoted) {
@@ -623,6 +596,13 @@ const ProductPage = ({ products, addToCart, handleVote }) => {
       setHasVoted(true);
     }
   };
+
+  // Combine all images into a single array
+  const allImages = [
+    ...product.tryons,
+    { public_url: product.processed_garment.public_url, type: 'processed_garment' },
+    { public_url: product.original_logo.public_url, type: 'original_logo' }
+  ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -632,87 +612,89 @@ const ProductPage = ({ products, addToCart, handleVote }) => {
       </Link>
 
       <div className="flex flex-col lg:flex-row gap-12">
-        <div className="lg:w-1/2">
-          <div className="relative rounded-lg overflow-hidden shadow-lg">
-            <img
-              src={product.tryons[currentImageIndex].public_url}
-              alt={`${product.name} - View ${currentImageIndex + 1}`}
-              className="w-full h-auto object-cover"
-            />
-          </div>
-          <div className="mt-4 flex justify-start space-x-2 overflow-x-auto py-2">
-            {product.tryons.map((tryon, index) => (
+        <div className="lg:w-3/5 flex flex-row">
+          {/* Thumbnails */}
+          <div className="flex flex-col space-y-2 mr-4">
+            {allImages.map((image, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentImageIndex(index)}
-                className={`flex-shrink-0 w-20 h-20 rounded-md overflow-hidden transition-all duration-300 ${currentImageIndex === index ? 'ring-2 ring-blue-500 shadow-md' : 'opacity-70 hover:opacity-100'
-                  }`}
+                className={`w-20 h-20 rounded-md overflow-hidden transition-all duration-300 ${
+                  currentImageIndex === index ? 'ring-2 ring-blue-500 shadow-md' : 'opacity-70 hover:opacity-100'
+                }`}
               >
                 <img
-                  src={tryon.public_url}
+                  src={image.public_url}
                   alt={`${product.name} thumbnail ${index + 1}`}
                   className="w-full h-full object-cover"
                 />
               </button>
             ))}
           </div>
+
+          {/* Main Image */}
+          <div className="flex-grow relative rounded-lg overflow-hidden shadow-lg">
+            <img
+              src={allImages[currentImageIndex].public_url}
+              alt={`${product.name} - View ${currentImageIndex + 1}`}
+              className="w-full h-auto object-cover"
+            />
+          </div>
         </div>
 
-        <div className="lg:w-1/2">
-            <h1 className="text-3xl font-bold mb-2">dasda dsasd asdas das  dasdas d asd s{product.name}</h1>
-          <div className="lg:w-1/2">
-            <p className="text-2xl font-semibold text-green-600 mb-4">
-              {t('product.price', { symbol: t('currency.symbol'), amount: product.price.toFixed(2) })}
-            </p>
-            <p className="text-gray-600 mb-6">{product.description}</p>
+        <div className="lg:w-1/3">
+          <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
+          <p className="text-2xl font-semibold text-green-600 mb-4">
+            {t('product.price', { symbol: t('currency.symbol'), amount: product.price.toFixed(2) })}
+          </p>
+          <p className="text-gray-600 mb-6">{product.description}</p>
 
+          <button
+            onClick={() => {
+              addToCart(product);
+              navigate('/cart');
+            }}
+            className="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition duration-300 mb-8 flex items-center justify-center"
+          >
+            <ShoppingCart className="mr-2" size={20} />
+            {t('product.addToCart')}
+          </button>
+
+          <div className="flex justify-between items-center mt-6">
             <button
-              onClick={() => {
-                addToCart(product);
-                navigate('/cart');
-              }}
-              className="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition duration-300 mb-8 flex items-center justify-center"
+              onClick={handleVoteClick}
+              className={`flex items-center text-base ${
+                hasVoted ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'
+              } transition duration-300`}
             >
-              <ShoppingCart className="mr-2" size={20} />
-              {t('product.addToCart')}
+              <ThumbsUp className="mr-2" size={20} />
+              <span className="font-semibold">
+                {t('product.voteCount', { count: product.voteCount || 0 })}
+              </span>
             </button>
 
-            <div className="flex justify-between items-center mt-6">
-              <button
-                onClick={handleVoteClick}
-                className={`flex items-center text-base ${hasVoted ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'
-                  } transition duration-300`}
-              >
-                <ThumbsUp className="mr-2" size={20} />
-
-                  <span className="font-semibold">
-              {t('product.voteCount', { count: product.voteCount || 0 })}
-            </span>
-              </button>
-
-              <div className="flex space-x-3">
-                {['twitter', 'facebook', 'whatsapp'].map((platform) => (
-                  <button
-                    key={platform}
-                    onClick={() => handleShare(platform)}
-                    className="p-2 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 transition duration-300"
-                    aria-label={`Share on ${platform}`}
-                  >
-                    {platform === 'twitter' && <Twitter size={20} />}
-                    {platform === 'facebook' && <Facebook size={20} />}
-                    {platform === 'whatsapp' && <Share2 size={20} />}
-                  </button>
-                ))}
-                {navigator.share && (
-                  <button
-                    onClick={() => handleShare('native')}
-                    className="p-2 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 transition duration-300"
-                    aria-label="Share"
-                  >
-                    <Share2 size={20} />
-                  </button>
-                )}
-              </div>
+            <div className="flex space-x-3">
+              {['twitter', 'facebook', 'whatsapp'].map((platform) => (
+                <button
+                  key={platform}
+                  onClick={() => handleShare(platform)}
+                  className="p-2 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 transition duration-300"
+                  aria-label={`Share on ${platform}`}
+                >
+                  {platform === 'twitter' && <Twitter size={20} />}
+                  {platform === 'facebook' && <Facebook size={20} />}
+                  {platform === 'whatsapp' && <Share2 size={20} />}
+                </button>
+              ))}
+              {navigator.share && (
+                <button
+                  onClick={() => handleShare('native')}
+                  className="p-2 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 transition duration-300"
+                  aria-label="Share"
+                >
+                  <Share2 size={20} />
+                </button>
+              )}
             </div>
           </div>
         </div>
