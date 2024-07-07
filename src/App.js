@@ -705,6 +705,7 @@ const ProductPage = ({ products, addToCart, handleVote }) => {
 
 const Cart = ({ cart, removeFromCart }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const total = cart.reduce((total, item) => total + item.price, 0);
 
@@ -732,8 +733,12 @@ const Cart = ({ cart, removeFromCart }) => {
       ) : (
         <>
           {cart.map((item, index) => (
-            <div key={index} className="flex items-center mb-4  pb-4">
-              <img src={item.imageUrl} alt={item.name} className="w-20 h-20 object-cover mr-4" />
+            <div key={index} className="flex items-center mb-4 pb-4 border-b">
+              <img 
+                src={item.processed_garment.public_url} 
+                alt={item.name} 
+                className="w-20 h-20 object-cover mr-4 rounded"
+              />
               <div className="flex-grow">
                 <h3 className="font-bold">{item.name}</h3>
                 <p className="text-gray-600">
