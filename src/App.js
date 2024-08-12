@@ -60,17 +60,62 @@ const useAnalytics = () => {
   return { trackEvent };
 };
 
-// Custom hook for real-time data fetching
-const useRealtimeCollection = (collectionName, queryConstraints = []) => {
+// New hook for fetching a single product
+const useProduct = (productId) => {
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const docRef = doc(db, 'products', productId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          let imageUrl = '/placeholder-image.jpg';
+          if (data.imagePath && typeof data.imagePath === 'string' && data.imagePath.trim() !== '') {
+            try {
+              const imageRef = ref(storage, data.imagePath.trim());
+              imageUrl = await getDownloadURL(imageRef);
+            } catch (error) {
+              console.error(`Error fetching image URL for product ${productId}:`, error);
+            }
+          }
+          setProduct({ id: docSnap.id, ...data, imageUrl });
+        } else {
+          setError(new Error('Product not found'));
+        }
+      } catch (err) {
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [productId]);
+
+  return { product, loading, error };
+};
+
+const useRealtimeCollection = (collectionName, queryConstraints = [], entryLimit = 10) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const collectionRef = collection(db, collectionName);
-    const q = query(collectionRef, ...queryConstraints);
+    const baseQuery = query(
+      collectionRef,
+      orderBy('timestamp', 'desc'),
+      limit(entryLimit),
+      ...queryConstraints
+    );
 
-    const unsubscribe = onSnapshot(q,
+    const unsubscribe = onSnapshot(
+      baseQuery,
       (snapshot) => {
         const fetchedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setData(fetchedData);
@@ -84,7 +129,7 @@ const useRealtimeCollection = (collectionName, queryConstraints = []) => {
     );
 
     return () => unsubscribe();
-  }, [collectionName, JSON.stringify(queryConstraints)]);
+  }, [collectionName, entryLimit, JSON.stringify(queryConstraints)]);
 
   return { data, loading, error };
 };
@@ -402,10 +447,7 @@ const HeroSection = ({ scrollToProducts }) => {
 
 
 const LandingPage = () => {
-
   const { t } = useTranslation();
-
-
   const [products, setProducts] = useState([]);
   const [lastDoc, setLastDoc] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -417,6 +459,8 @@ const LandingPage = () => {
   const productRefs = useRef({});
   const loadedIds = useRef(new Set());
   const isInitialMount = useRef(true);
+
+  const { data: initialProducts, loading: initialLoading, error: initialError } = useRealtimeCollection('products', [], 10);
 
   const loadMoreProducts = useCallback(async () => {
     if (loading || !hasMore) return;
@@ -475,11 +519,12 @@ const LandingPage = () => {
   }, [lastDoc, loading, hasMore]);
 
   useEffect(() => {
-    if (isInitialMount.current) {
+    if (isInitialMount.current && initialProducts.length > 0) {
       isInitialMount.current = false;
-      loadMoreProducts();
+      setProducts(initialProducts);
+      setLastDoc(initialProducts[initialProducts.length - 1]);
     }
-  }, [loadMoreProducts]);
+  }, [initialProducts]);
 
   useEffect(() => {
     if (lastViewedProductId && productRefs.current[lastViewedProductId]) {
@@ -507,6 +552,14 @@ const LandingPage = () => {
     productListRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  if (initialLoading) {
+    return <div className="text-center py-4">{t('product.loading')}</div>;
+  }
+
+  if (initialError) {
+    return <div className="text-center py-4 text-red-500">{initialError.message}</div>;
+  }
+
   return (
     <div>
       <HeroSection scrollToProducts={scrollToProducts} />
@@ -518,9 +571,8 @@ const LandingPage = () => {
         lastProductRef={lastProductRef}
       />
       {loading && <div className="text-center py-4">{t('product.loadingMore')}</div>}
-      {!loading && !hasMore && products.length > 0 && <div className="text-center py-4"></div>}
+      {!loading && !hasMore && products.length > 0 && <div className="text-center py-4">{t('product.noMoreProducts')}</div>}
       {!loading && !hasMore && products.length === 0 && <div className="text-center py-4">{t('product.noProducts')}</div>}
-
     </div>
   );
 };
@@ -567,19 +619,19 @@ const ProductGrid = React.memo(({ products, productListRef, productRefs, lastPro
 const ProductPage = ({ products, addToCart, handleVote }) => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [product, setProduct] = useState(null);
+  //const [product, setProduct] = useState(null);
+  const { product, loading, error } = useProduct(id);
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [hasVoted, setHasVoted] = useState(false);
   const { setLastViewedProductId } = useContext(LastViewedProductContext);
   const { t } = useTranslation();
 
   useEffect(() => {
-    const currentProduct = products.find(p => p.id === id);
-    if (currentProduct) {
-      setProduct(currentProduct);
-      setLastViewedProductId(currentProduct.id);
+    if (product) {
+      setLastViewedProductId(product.id);
     }
-  }, [products, id, setLastViewedProductId]);
+  }, [product, setLastViewedProductId]);
 
   if (!product) return <div className="flex justify-center items-center h-screen">{t('loading')}</div>;
 
